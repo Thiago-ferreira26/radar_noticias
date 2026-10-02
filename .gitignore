@@ -1,0 +1,16 @@
+# Segredos e ambiente local
+.env
+.venv/
+__pycache__/
+*.pyc
+
+# Dados gerados (banco, logs e imagens baixadas das notícias)
+data/
+logs/
+static/imagens/
+
+# Base interna da newsletter (fichas comerciais e contatos) — não versionar
+radar-cordeiro-relatorio-*.html
+
+# Configuração local do Claude Code
+.claude/

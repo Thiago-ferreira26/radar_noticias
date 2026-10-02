@@ -1,0 +1,18 @@
+[theme]
+base = "light"
+primaryColor = "#1f5f5a"
+backgroundColor = "#eef1f0"
+secondaryBackgroundColor = "#e2e8e5"
+textColor = "#16211f"
+
+[server]
+headless = true
+# Serve a pasta static/ em /app/static/ (imagens das notícias).
+enableStaticServing = true
+
+[client]
+# O Modo TV (pages/tv.py, rota /tv) é aberto pelo link do painel; sem menu lateral de páginas.
+showSidebarNavigation = false
+
+[browser]
+gatherUsageStats = false

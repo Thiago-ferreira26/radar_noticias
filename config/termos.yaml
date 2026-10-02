@@ -1,0 +1,67 @@
+# Termos de busca do Radar Cordeiro.
+# Pode ser editado aqui ou na aba "Configuração" do painel.
+#  - exa: true      -> o termo concorre às buscas Exa (máx. 5 por dia; rodízio diário se houver mais)
+#  - prioridade     -> 1 = mais importante (ordem de escolha para o Exa)
+#  - ativo: false   -> mantém o termo no arquivo sem buscar
+exa:
+  limite_diario: 5          # nunca passa de 5, mesmo que se coloque um número maior
+  dias_retroativos: 7       # notícias publicadas nos últimos N dias
+  resultados_por_busca: 10
+ddg:
+  regiao: br-pt             # Brasil, português
+  periodo: w                # d = dia, w = semana, m = mês
+  resultados_por_busca: 15
+  pausa_segundos: 2         # intervalo entre buscas para evitar bloqueio
+classificacao:
+  ufs_prioritarias: [CE, PA]
+  ufs_atuacao: [MA, PI, RN, PB, PE, AL, SE, BA]
+  porte_relevante_milhoes: 100
+excluir_se_contiver:
+  - futebol
+  - novela
+  - horóscopo
+temas:
+  - nome: Energia
+    termos:
+      - {texto: parque eólico Ceará, exa: true, prioridade: 1}
+      - {texto: hidrogênio verde Pecém, exa: true, prioridade: 2}
+      - {texto: usina solar Ceará, prioridade: 3}
+      - {texto: linha de transmissão Nordeste, prioridade: 3}
+      - {texto: energia Pará investimento, prioridade: 3}
+      - {texto: data center Pecém, prioridade: 2}
+  - nome: Portos
+    termos:
+      - {texto: Porto do Pecém, exa: true, prioridade: 1}
+      - {texto: Porto de Vila do Conde, prioridade: 2}
+      - {texto: terminal portuário Pará, prioridade: 2}
+      - {texto: Porto de Fortaleza, prioridade: 3}
+  - nome: Mineração
+    termos:
+      - {texto: mineração Pará investimento, exa: true, prioridade: 1}
+      - {texto: mineradora Ceará, prioridade: 2}
+      - {texto: siderúrgica Pecém, prioridade: 2}
+      - {texto: projeto de mineração investimento, prioridade: 3}
+  - nome: Industrial
+    termos:
+      - {texto: nova fábrica Ceará, exa: true, prioridade: 1}
+      - {texto: nova fábrica Pará, prioridade: 2}
+      - {texto: ZPE Ceará, prioridade: 3}
+      - {texto: investimento industrial Nordeste, prioridade: 3}
+  - nome: Óleo & Gás
+    termos:
+      - {texto: Margem Equatorial Petrobras, prioridade: 2}
+      - {texto: gasoduto Nordeste, prioridade: 3}
+  - nome: Logística/Hidrovias
+    termos:
+      - {texto: Transnordestina obras, prioridade: 2}
+      - {texto: ferrovia Pará, prioridade: 2}
+      - {texto: hidrovia Tapajós, prioridade: 3}
+  - nome: Saneamento
+    termos:
+      - {texto: dessalinização Fortaleza, prioridade: 3}
+      - {texto: saneamento Ceará obras, prioridade: 3}
+  - nome: Infraestrutura
+    termos:
+      - {texto: obras Ceará investimento, prioridade: 2}
+      - {texto: obras Pará investimento, prioridade: 3}
+      - {texto: concessão infraestrutura Nordeste, prioridade: 3}
