@@ -211,3 +211,17 @@ o DB Browser for SQLite).
 - O DuckDuckGo News rende mais com termos curtos, de 2 a 4 palavras. O Exa aceita frases mais longas.
 - O DuckDuckGo não tem API oficial e pode limitar as requisições. Quando isso acontece, a coleta
   tenta de novo e registra o erro, sem interromper as outras buscas.
+
+## Publicar no Streamlit Community Cloud
+
+- **Chave do Exa:** em *Settings → Secrets*, adicione `EXA_API_KEY = "sua-chave"`. O app procura
+  primeiro no `.env` e depois nos Secrets.
+- **Dados não persistem:** o disco do Cloud é temporário e o `data/` não vai para o GitHub. Por isso
+  o banco começa vazio a cada reinício, e as coletas, fichas importadas e imagens se perdem quando o
+  app reinicia.
+- **Sem agendamento:** o Cloud não roda o `scheduler.py`; só a coleta manual funciona.
+- **Uso diário:** para a rotina com histórico, mantenha o painel e o agendamento rodando num
+  computador ou servidor da empresa (seção 4).
+- **Avisos no console do navegador:** `Tracking Prevention blocked…`, `heap-api … 404`,
+  `/api/v2/user/details 404`, `Unrecognized feature` e `allow-scripts and allow-same-origin` vêm da
+  própria plataforma do Cloud e do navegador, não deste app, e podem ser ignorados.

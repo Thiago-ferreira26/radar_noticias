@@ -23,6 +23,13 @@ EXA_HARD_LIMIT = 5
 
 def exa_api_key() -> str | None:
     key = os.getenv("EXA_API_KEY", "").strip()
+    if not key:  # Streamlit Community Cloud: a chave fica em Settings → Secrets (EXA_API_KEY = "...")
+        try:
+            import streamlit as st
+
+            key = str(st.secrets.get("EXA_API_KEY", "")).strip()
+        except Exception:  # sem streamlit ou sem secrets.toml (ex.: coleta pela linha de comando)
+            key = ""
     return key or None
 
 

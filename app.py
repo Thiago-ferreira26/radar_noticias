@@ -169,7 +169,7 @@ def newsletter_filters(df: pd.DataFrame, key: str) -> pd.DataFrame:
         data=lambda d=df: export.workbook_bytes(list(zip(d.to_dict("records"), d["ficha"])), load_accounts()),
         file_name=f"radar-cordeiro-{today_key}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        key=f"{key}_xlsx", disabled=df.empty, width="stretch",
+        key=f"{key}_xlsx", disabled=df.empty, width="stretch", on_click="ignore",
     )
     html('<hr class="rc-sep">')
     return df
@@ -269,11 +269,16 @@ with tab_hist:
                      "title", "summary", "source", "url", "term", "engine", "signal_type", "impacto", "times_seen",
                      "entrada", "fase", "executor", "ficha_origem"]]
         d1, d2, _ = st.columns([1, 1, 3])
-        d1.download_button("Baixar CSV filtrado", table.to_csv(index=False).encode("utf-8-sig"),
-                           file_name=f"radar-cordeiro-{today_key}.csv", mime="text/csv")
+        # Arquivos gerados no clique (data=callable): um link pré-gerado some quando o app reinicia/reconecta
+        # e o clique dava "Download Button source error - 404".
         sep = "\n\n" + "=" * 80 + "\n\n"
-        d2.download_button("Baixar fichas do executivo (TXT)", sep.join(df["ficha_texto"]).encode("utf-8-sig"),
-                           file_name=f"radar-cordeiro-fichas-{today_key}.txt", mime="text/plain")
+        d1.download_button("Baixar CSV filtrado", data=lambda t=table: t.to_csv(index=False).encode("utf-8-sig"),
+                           file_name=f"radar-cordeiro-{today_key}.csv", mime="text/csv",
+                           on_click="ignore", key="hist_csv")
+        d2.download_button("Baixar fichas do executivo (TXT)",
+                           data=lambda f=df["ficha_texto"]: sep.join(f).encode("utf-8-sig"),
+                           file_name=f"radar-cordeiro-fichas-{today_key}.txt", mime="text/plain",
+                           on_click="ignore", key="hist_txt")
         if df.empty:
             html(ui.empty("Nenhuma notícia para os filtros escolhidos."))
         elif view == "Tabela":
@@ -304,7 +309,7 @@ with tab_run:
         st.caption("Executa Exa (apenas se ainda houver cota no dia) e DuckDuckGo para todos os termos ativos. "
                    "Pode levar alguns minutos.")
         if not config.exa_api_key():
-            st.warning("EXA_API_KEY não encontrada no .env — a coleta usará apenas o DuckDuckGo.")
+            st.warning("EXA_API_KEY não encontrada (.env ou Secrets do Streamlit Cloud) — a coleta usará apenas o DuckDuckGo.")
         if running:
             st.info(f"Coleta #{running['id']} em andamento desde {ui.fmt_date(running['started_at'], True)}.")
         if st.button("Executar coleta agora", type="primary", disabled=bool(running)):
