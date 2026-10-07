@@ -88,7 +88,7 @@ h1,h2,h3{font-family:"IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;}
 .rc-card.pot-alto{border-left-color:var(--amber);}
 .rc-card.pot-medio{border-left-color:var(--terracotta);}
 .rc-card.pot-baixo{border-left-color:var(--neutral-tag);}
-.rc-img{width:100%; height:170px; object-fit:cover; border-radius:8px; background:var(--surface-alt); display:block;}
+.rc-img{width:100% !important; max-width:none !important; height:170px; object-fit:cover; border-radius:8px; background:var(--surface-alt); display:block;}
 .rc-card-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
 .rc-tags{display:flex; gap:6px; flex-wrap:wrap; align-items:center;}
 .rc-tag{font-size:10.8px; padding:2.5px 8px; border-radius:999px; font-weight:600; text-transform:uppercase;
@@ -163,6 +163,29 @@ h1,h2,h3{font-family:"IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;}
   border-radius:6px; padding:8px; background:var(--surface); color:var(--ink); resize:vertical;}
 .cord-copy small{display:block; color:var(--ink-faint); font-size:11px; margin-bottom:6px;}
 
+/* Barra de filtros (chips da newsletter) */
+.rc-chiprow-label{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint);}
+.rc-sep{border:0; border-top:1px solid var(--border); margin:8px 0 10px;}
+[data-testid="stButtonGroup"] button{border-radius:999px !important; border:1px solid var(--border) !important;
+  background:var(--surface) !important; color:var(--ink-soft) !important; padding:6px 11px; min-height:0;}
+[data-testid="stButtonGroup"] button:hover{border-color:var(--teal) !important;}
+[data-testid="stButtonGroup"] button p{font-size:12.5px; font-family:"IBM Plex Sans";}
+[data-testid="stButtonGroup"] button[aria-pressed="true"]{
+  background:var(--teal) !important; border-color:var(--teal) !important; color:#fff !important;}
+[data-testid="stButtonGroup"] button[aria-pressed="true"] p{
+  font-weight:600; color:#fff;}
+.rc-criteria{margin:-4px 0 6px;}
+.rc-criteria summary{font-size:12px; color:var(--teal); cursor:pointer; font-weight:600; list-style:none;}
+.rc-criteria summary::-webkit-details-marker{display:none;}
+.rc-criteria summary::before{content:"▸ "; font-size:10px;}
+.rc-criteria[open] summary::before{content:"▾ ";}
+.rc-criteria-body{margin-top:8px; padding:12px 14px; background:var(--surface); border:1px solid var(--border);
+  border-radius:10px; max-width:640px;}
+.rc-criteria-body p{margin:0 0 6px; font-size:12.5px; color:var(--ink-soft);}
+.rc-criteria-body ol{margin:0 0 6px; padding-left:18px;}
+.rc-criteria-body li{font-size:12.5px; line-height:1.5; color:var(--ink-soft); margin:4px 0;}
+.rc-criteria-body b{color:var(--ink);}
+
 /* Exa meter */
 .rc-meter{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; box-shadow:var(--shadow);}
 .rc-meter .lbl{font-family:"IBM Plex Sans Condensed"; text-transform:uppercase; letter-spacing:.04em; font-size:13px; color:var(--teal); font-weight:700;}
@@ -223,6 +246,26 @@ def about(sources: list[str]) -> str:
         "(Baixo a Muito Alto) e impacto provável para a Cordeiro; itens repetidos não são duplicados. "
         "A classificação é uma triagem — valide antes de prospectar.</p></div>"
         f'<div><h2>Fontes mais frequentes</h2><div class="rc-chips">{chips}</div></div></div>'
+    )
+
+
+def criteria() -> str:
+    """Regras de potencial (mesmo texto da newsletter), recolhidas em "Como o potencial é calculado"."""
+    return (
+        '<details class="rc-criteria"><summary>Como o potencial é calculado</summary><div class="rc-criteria-body">'
+        "<p>Aplicado em ordem — a primeira regra que se encaixa define o teto da nota:</p><ol>"
+        "<li>Sem relação prática com içamento/movimentação de carga pesada (regulatório, discussão setorial, "
+        "saneamento simples, conteúdo macro sem obra)? → <b>Baixo</b>, fim.</li>"
+        "<li>É panorama agregado/nacional, sem projeto ou UF específica nomeada? → no máximo <b>Médio</b>.</li>"
+        "<li>Fica fora da área de atuação conhecida da Cordeiro (não é CE, PA, nem um estado já mapeado/Nordeste)? "
+        "→ no máximo <b>Médio</b>.</li>"
+        "<li>Ainda depende de decisão futura — edital em consulta, decisão de investimento (FID) não definida, ou só "
+        "estudo — sem ser investimento aprovado/contratado nem obra em andamento? → no máximo <b>Alto</b>.</li>"
+        "<li>Passou por tudo acima: está em CE/PA, no segmento certo (energia, portos, mineração, industrial "
+        "pesado), já é investimento aprovado/obra em andamento e tem porte financeiro relevante → <b>Muito Alto</b>. "
+        "Mesmas condições fora de CE/PA (mas dentro da área de atuação) → <b>Alto</b>.</li>"
+        "</ol><p>Nas notícias coletadas automaticamente, estas regras são aplicadas por palavras-chave "
+        "(triagem); nas fichas pesquisadas vale a nota do analista.</p></div></details>"
     )
 
 

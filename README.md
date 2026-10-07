@@ -63,6 +63,20 @@ O painel abre em http://localhost:8501 e tem quatro abas:
 - **Configuração**: edita termos (tema, texto, uso no Exa, prioridade, ativo) e parâmetros, e
   importa as fichas pesquisadas a partir do HTML da newsletter.
 
+### Barra de filtros
+
+As abas Visão do dia e Histórico usam a barra de filtros da newsletter: busca, chips de
+**Vertical**, **Potencial** (com "Como o potencial é calculado"), **Prazo da demanda**,
+**Categoria** e **Região**, listas de **Fase do projeto** e **Empresa executora** e o botão
+**Baixar Excel organizado**. O Excel exporta o resultado filtrado nas mesmas 4 abas da newsletter:
+
+- **Oportunidades**, com Responsável e Andamento para preencher (lista suspensa);
+- **Roteiros**, com o passo a passo de cada ficha;
+- **Contatos**, com os canais oficiais das empresas;
+- **Cadastro**, com as etapas de cadastro por empresa.
+
+Os chips de Categoria e Região mostram só o que existe na base.
+
 ### Ficha do executivo
 
 Cada card traz o bloco **Entrada da Cordeiro** (prioridade, fase e executor) e a **Ficha do

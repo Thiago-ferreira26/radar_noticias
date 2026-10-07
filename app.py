@@ -4,12 +4,13 @@
 """
 from __future__ import annotations
 
+import re
 from datetime import date, timedelta
 
 import pandas as pd
 import streamlit as st
 
-from radar import config, db, dossier, images, ui
+from radar import config, db, dossier, export, images, ui
 from radar.collector import run_collection
 from radar.classify import CATEGORIES
 
@@ -72,19 +73,105 @@ def render_cards(df: pd.DataFrame, new_day: str | None = None, limit: int | None
     html(ui.grid(cards))
 
 
-def apply_quick_filters(df: pd.DataFrame, key: str) -> pd.DataFrame:
-    """Filtros em chips, no estilo da newsletter (vertical, potencial, busca livre)."""
-    c1, c2, c3 = st.columns([2, 3, 3])
-    verts = c1.pills("Vertical", ["Energia", "Minerais", "Infraestrutura"], selection_mode="multi", key=f"{key}_v")
-    pots = c2.pills("Potencial", ui.POTENTIALS, selection_mode="multi", key=f"{key}_p")
-    q = c3.text_input("Buscar", placeholder="Palavra-chave, empresa, projeto…", key=f"{key}_q")
+VERTICALS = ["Energia", "Minerais", "Infraestrutura"]
+PRAZOS = ["Curto", "Médio", "Longo", "A confirmar"]
+UF_PRIORITY = ["CE", "PA", "NE", "BR"]
+FILTER_SUFFIXES = ("q", "v", "p", "pz", "c", "uf", "fase", "exec")
+
+
+def prazo_tier(value) -> str:
+    m = re.match(r"^(Curto|Médio|Longo)", str(value or "").strip())
+    return m.group(1) if m else "A confirmar"
+
+
+def prazo_label(tier: str) -> str:
+    y = config.today().year
+    hint = {"Curto": f"{y}–{y + 1}", "Médio": f"{y + 2}–{y + 3}", "Longo": f"{y + 4}+"}.get(tier)
+    return f"{tier} ({hint})" if hint else tier
+
+
+def chip_row(label: str, options: list, key: str, fmt=None, dots: dict | None = None, big: bool = False):
+    """Linha de chips no estilo da newsletter: rótulo em caixa alta à esquerda, chips à direita."""
+    c_label, c_chips = st.columns([1.15, 8.85], vertical_alignment="center")
+    css = ""
+    if dots:  # bolinha colorida antes de cada chip, na ordem das opções
+        size = 8 if big else 7
+        css += (f".st-key-{key} button p::before{{content:'';display:inline-block;width:{size}px;height:{size}px;"
+                "border-radius:50%;margin-right:6px;vertical-align:middle;}")
+        css += "".join(f".st-key-{key} button:nth-of-type({i}) p::before{{background:{dots.get(o, '#7c8b86')};}}"
+                       for i, o in enumerate(options, 1))
+    if big:  # chips de Vertical: maiores, condensados e em caixa alta
+        css += (f".st-key-{key} button p{{font-family:'IBM Plex Sans Condensed';font-weight:700;font-size:13.5px;"
+                f"text-transform:uppercase;letter-spacing:.03em;}}"
+                f".st-key-{key} button{{padding:6px 18px !important;border-width:1.5px !important;}}")
+    # O <style> vai junto do rótulo para não criar um bloco (e espaçamento) a mais na página.
+    c_label.markdown(f'<style>{css}</style><span class="rc-chiprow-label">{label}</span>', unsafe_allow_html=True)
+    return c_chips.pills(label, options, selection_mode="multi", key=key, format_func=fmt,
+                         label_visibility="collapsed") or []
+
+
+def clear_filters(key: str) -> None:
+    """Volta todos os filtros da barra ao estado inicial (atribuir o vazio também reseta o visual dos chips)."""
+    empty = {"q": "", "fase": "Todas as fases", "exec": "Todas as situações"}
+    for suffix in FILTER_SUFFIXES:
+        st.session_state[f"{key}_{suffix}"] = empty.get(suffix, [])
+
+
+def newsletter_filters(df: pd.DataFrame, key: str) -> pd.DataFrame:
+    """Barra de filtros da newsletter: busca, vertical, potencial, prazo, categoria, região, fase,
+    empresa executora e o botão "Baixar Excel organizado" (exporta o resultado filtrado)."""
+    c_q, c_clear = st.columns([8.5, 1.5], vertical_alignment="bottom")
+    q = c_q.text_input("Buscar", placeholder="Buscar por palavra-chave, empresa, projeto…", key=f"{key}_q",
+                       label_visibility="collapsed")
+    c_clear.button("Limpar filtros", key=f"{key}_clear", on_click=clear_filters, args=(key,), type="tertiary")
+
+    verts = chip_row("Vertical", VERTICALS, f"{key}_v", dots=ui.VERT_COLORS, big=True)
+    pots = chip_row("Potencial", ui.POTENTIALS, f"{key}_p")
+    html(ui.criteria())
+    prazos = chip_row("Prazo da demanda", PRAZOS, f"{key}_pz", fmt=prazo_label)
+    present = set(df["category"].dropna())
+    cats = [c for c in CATEGORIES if c in present] + sorted(present - set(CATEGORIES))
+    sel_cats = chip_row("Categoria", cats, f"{key}_c", dots=ui.CAT_COLORS)
+    ufs_present = {u for lst in df["uf_list"] for u in lst if u}
+    ufs = ([u for u in UF_PRIORITY if u in ufs_present]
+           + sorted(ufs_present - set(UF_PRIORITY), key=lambda u: ui.UF_LABEL.get(u, u)))
+    sel_ufs = chip_row("Região", ufs, f"{key}_uf", fmt=lambda u: ui.UF_LABEL.get(u, u))
+
+    html('<hr class="rc-sep">')
+    c1, c2, c3, c4, c5 = st.columns([1.3, 3.2, 1.5, 3.2, 2], vertical_alignment="center")
+    c1.markdown("**Fase do projeto**")
+    fase = c2.selectbox("Fase do projeto", ["Todas as fases"] + sorted(df["fase"].dropna().unique()),
+                        key=f"{key}_fase", label_visibility="collapsed")
+    c3.markdown("**Empresa executora**")
+    executor = c4.selectbox("Empresa executora", ["Todas as situações"] + sorted(df["executor"].dropna().unique()),
+                            key=f"{key}_exec", label_visibility="collapsed")
+
+    if q:
+        text = df["title"].fillna("") + " " + df["summary"].fillna("") + " " + df["source"].fillna("")
+        df = df[text.str.contains(q, case=False, regex=False)]
     if verts:
         df = df[df["vertical"].isin(verts)]
     if pots:
         df = df[df["potential"].isin(pots)]
-    if q:
-        mask = (df["title"].fillna("") + " " + df["summary"].fillna("") + " " + df["source"].fillna(""))
-        df = df[mask.str.contains(q, case=False, regex=False)]
+    if prazos:
+        df = df[df["prazo"].map(prazo_tier).isin(prazos)]
+    if sel_cats:
+        df = df[df["category"].isin(sel_cats)]
+    if sel_ufs:
+        df = df[df["uf_list"].apply(lambda lst: any(u in lst for u in sel_ufs))]
+    if fase != "Todas as fases":
+        df = df[df["fase"] == fase]
+    if executor != "Todas as situações":
+        df = df[df["executor"] == executor]
+
+    c5.download_button(
+        "Baixar Excel organizado",
+        data=lambda d=df: export.workbook_bytes(list(zip(d.to_dict("records"), d["ficha"])), load_accounts()),
+        file_name=f"radar-cordeiro-{today_key}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        key=f"{key}_xlsx", disabled=df.empty, width="stretch",
+    )
+    html('<hr class="rc-sep">')
     return df
 
 
@@ -120,7 +207,7 @@ with tab_day:
         day = today_key if today_key in days else days[0]
         label = "hoje" if day == today_key else "última coleta com resultados"
         st.caption(f"Notícias coletadas em **{ui.fmt_date(day)}** ({label}), agrupadas por tema e ordenadas por potencial.")
-        df_day = apply_quick_filters(news[news["collected_day"] == day], "day")
+        df_day = newsletter_filters(news[news["collected_day"] == day], "day")
         n_low = int((df_day["potential"] == "Baixo").sum())
         if n_low and st.toggle(f"Ocultar potencial Baixo ({n_low})", value=True, key="day_hide_low"):
             df_day = df_day[df_day["potential"] != "Baixo"]
@@ -149,37 +236,27 @@ with tab_hist:
         view = c3.segmented_control("Exibir", ["Cards", "Tabela"], default="Cards")
 
         c4, c5, c6, c7 = st.columns(4)
-        temas = c4.multiselect("Tema", sorted(news["category"].dropna().unique()))
-        fontes = c5.multiselect("Fonte", sorted(news["source"].dropna().unique()))
-        motores = c6.multiselect("Mecanismo", sorted(news["engine"].dropna().unique()), format_func=lambda e: ui.ENGINE_LABEL.get(e, e))
-        ufs_all = sorted({u for lst in news["uf_list"] for u in lst if u})
-        ufs = c7.multiselect("Região", ufs_all, format_func=lambda u: ui.UF_LABEL.get(u, u))
+        fontes = c4.multiselect("Fonte", sorted(news["source"].dropna().unique()))
+        motores = c5.multiselect("Mecanismo", sorted(news["engine"].dropna().unique()),
+                                 format_func=lambda e: ui.ENGINE_LABEL.get(e, e))
+        entradas = c6.multiselect("Entrada da Cordeiro", ["Prospectar", "Ampliar conta", "Preparar", "Monitorar"])
+        origens = c7.multiselect("Ficha do executivo", ["newsletter", "automatica"],
+                                 format_func={"newsletter": "Pesquisada", "automatica": "Preliminar"}.get)
 
-        c8, c9, c10 = st.columns([1, 2, 1])
-        entradas = c8.multiselect("Entrada da Cordeiro", ["Prospectar", "Ampliar conta", "Preparar", "Monitorar"])
-        fases = c9.multiselect("Fase do projeto", sorted(news["fase"].dropna().unique()))
-        origens = c10.multiselect("Ficha do executivo", ["newsletter", "automatica"],
-                                  format_func={"newsletter": "Pesquisada", "automatica": "Preliminar"}.get)
-
-        df = apply_quick_filters(news, "hist")
-        if entradas:
-            df = df[df["entrada"].isin(entradas)]
-        if fases:
-            df = df[df["fase"].isin(fases)]
-        if origens:
-            df = df[df["ficha_origem"].isin(origens)]
+        base = news
         if isinstance(period, (tuple, list)) and len(period) == 2:
             start, end = (d.isoformat() for d in period)
-            dates = df[col].fillna("").str[:10]
-            df = df[(dates >= start) & (dates <= end)]
-        if temas:
-            df = df[df["category"].isin(temas)]
+            dates = base[col].fillna("").str[:10]
+            base = base[(dates >= start) & (dates <= end)]
         if fontes:
-            df = df[df["source"].isin(fontes)]
+            base = base[base["source"].isin(fontes)]
         if motores:
-            df = df[df["engine"].isin(motores)]
-        if ufs:
-            df = df[df["uf_list"].apply(lambda lst: any(u in lst for u in ufs))]
+            base = base[base["engine"].isin(motores)]
+        if entradas:
+            base = base[base["entrada"].isin(entradas)]
+        if origens:
+            base = base[base["ficha_origem"].isin(origens)]
+        df = newsletter_filters(base, "hist")
 
         sort = st.selectbox("Ordenar", ["Mais recentes", "Maior potencial", "Mais antigas"], label_visibility="collapsed")
         if sort == "Maior potencial":
@@ -188,11 +265,11 @@ with tab_hist:
             df = df.sort_values("sort_date", ascending=(sort == "Mais antigas"))
 
         html(ui.section_title("Todas as oportunidades", len(df)))
-        export = df[["collected_at", "published_at", "category", "vertical", "ufs", "potential", "demand", "prazo",
+        table = df[["collected_at", "published_at", "category", "vertical", "ufs", "potential", "demand", "prazo",
                      "title", "summary", "source", "url", "term", "engine", "signal_type", "impacto", "times_seen",
                      "entrada", "fase", "executor", "ficha_origem"]]
         d1, d2, _ = st.columns([1, 1, 3])
-        d1.download_button("Baixar CSV filtrado", export.to_csv(index=False).encode("utf-8-sig"),
+        d1.download_button("Baixar CSV filtrado", table.to_csv(index=False).encode("utf-8-sig"),
                            file_name=f"radar-cordeiro-{today_key}.csv", mime="text/csv")
         sep = "\n\n" + "=" * 80 + "\n\n"
         d2.download_button("Baixar fichas do executivo (TXT)", sep.join(df["ficha_texto"]).encode("utf-8-sig"),
@@ -201,7 +278,7 @@ with tab_hist:
             html(ui.empty("Nenhuma notícia para os filtros escolhidos."))
         elif view == "Tabela":
             st.dataframe(
-                export, hide_index=True, width="stretch",
+                table, hide_index=True, width="stretch",
                 column_config={
                     "url": st.column_config.LinkColumn("URL"),
                     "collected_at": "Coleta", "published_at": "Publicação", "category": "Tema",
