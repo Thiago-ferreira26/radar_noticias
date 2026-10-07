@@ -2,7 +2,7 @@
 
 Fontes, em ordem: imagem devolvida pelo mecanismo de busca (DuckDuckGo/Exa) e imagens de
 capa da própria matéria (og:image / twitter:image). Arquivos ficam em static/ porque o
-Streamlit serve essa pasta em /app/static/ (server.enableStaticServing).
+Streamlit serve essa pasta em app/static/ (server.enableStaticServing).
 
 Preencher imagens das notícias que ainda não têm (ex.: base antiga ou importada):
     python -m radar.images
@@ -26,7 +26,9 @@ log = logging.getLogger("radar")
 
 MAX_IMAGES = 2
 IMG_DIR = config.BASE_DIR / "static" / "imagens"
-STATIC_URL = "/app/static/imagens/"
+# Endereço RELATIVO: no Streamlit Cloud o app roda sob um subcaminho (/~/+/) e "/app/static/" (absoluto)
+# apontaria para fora dele, dando 404. Relativo funciona tanto na raiz quanto em subcaminhos.
+STATIC_URL = "app/static/imagens/"
 MAX_BYTES = 8_000_000
 MIN_W, MIN_H = 320, 180          # descarta ícones, logos e pixels de rastreamento
 MAX_SIZE = (1600, 1000)          # suficiente para uma TV Full HD

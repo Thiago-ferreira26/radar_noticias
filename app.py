@@ -323,6 +323,13 @@ with tab_run:
             kind = {"ok": st.success, "com_erros": st.warning, "ignorada": st.info}.get(res["status"], st.error)
             kind(f"Coleta {res['status']}: {res['message']} Exa usado nesta execução: {res.get('exa_used', 0)}.")
 
+        n_sem_img = int((news["images"].str.len() == 0).sum()) if len(news) else 0
+        if st.button(f"Buscar imagens que faltam ({n_sem_img} notícias sem imagem)", disabled=not n_sem_img):
+            with st.spinner("Baixando imagens (até 2 por notícia)…"):
+                images.backfill()
+            refresh()
+            st.rerun()
+
     st.markdown("#### Execuções")
     if runs.empty:
         st.caption("Nenhuma execução registrada.")
@@ -415,8 +422,12 @@ with tab_cfg:
         except ValueError as exc:
             st.error(str(exc))
         else:
+            # As notícias importadas não passam pela coleta: busca as imagens delas agora.
+            with st.spinner("Buscando imagens das notícias importadas…"):
+                n_img = images.backfill()
             refresh()
             st.success(f"Importado: {result['fichas']} fichas, {result['noticias_novas']} notícias novas, "
-                       f"{result['noticias_atualizadas']} já existentes atualizadas, {result['contas']} contas.")
+                       f"{result['noticias_atualizadas']} já existentes atualizadas, {result['contas']} contas; "
+                       f"{n_img} imagens.")
 
 html(ui.footer(f"Última atualização: {last_update} · Fuso {config.TZ.key}"))
