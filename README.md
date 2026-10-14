@@ -63,6 +63,21 @@ O painel abre em http://localhost:8501 e tem quatro abas:
 - **Configuração**: edita termos (tema, texto, uso no Exa, prioridade, ativo) e parâmetros, e
   importa as fichas pesquisadas a partir do HTML da newsletter.
 
+### Visão do executivo e visão de administrador
+
+- **Executivo, sem login:** vê só a **Visão do dia**, com a barra de filtros, os cards, a ficha, o
+  envio ao Bitrix e o Excel, além do Modo TV.
+- **Administrador:** entra pelo botão **🔒 Área do administrador**, no topo, e passa a ver também:
+  - as abas **Histórico**, **Coleta e logs** (coleta manual, execuções, erros, imagens) e
+    **Configuração**;
+  - o indicador **Buscas Exa hoje**.
+
+O login vale até recarregar a página ou clicar em **Sair**. Depois de 5 senhas erradas, o login
+fica bloqueado por 5 minutos naquela sessão.
+
+Usuário e senha ficam em `ADMIN_USER` e `ADMIN_PASSWORD`, no `.env` ou nos Secrets do Streamlit
+Cloud, e nunca no código. Sem essas variáveis, ninguém consegue entrar como administrador.
+
 ### Barra de filtros
 
 As abas Visão do dia e Histórico usam a barra de filtros da newsletter: busca, chips de

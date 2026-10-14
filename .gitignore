@@ -14,3 +14,6 @@ radar-cordeiro-relatorio-*.html
 
 # Configuração local do Claude Code
 .claude/
+
+# Segredos do Streamlit (copiar para Settings → Secrets no Cloud) — não versionar
+.streamlit/secrets.toml

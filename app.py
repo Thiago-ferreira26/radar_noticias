@@ -10,7 +10,7 @@ from datetime import date, timedelta
 import pandas as pd
 import streamlit as st
 
-from radar import config, crm, db, dossier, export, images, ui
+from radar import auth, config, crm, db, dossier, export, images, ui
 from radar.collector import run_collection
 from radar.classify import CATEGORIES
 
@@ -233,18 +233,28 @@ exa_today = db.exa_used(today_key)
 finished = runs[runs["finished_at"].notna()]
 last_update = ui.fmt_date(finished.iloc[0]["finished_at"], with_time=True) if len(finished) else "—"
 
-html(ui.header([
+is_admin = auth.is_admin()
+stats = [
     (f"{len(news)}", "Monitorados", False),
     (f"{int(news['potential'].isin(['Muito Alto', 'Alto']).sum())}", "Alta prioridade", False),
     (f"{int((news['collected_day'] == today_key).sum())}", "Novos hoje", False),
-    (f"{exa_today}/{exa_limit}", "Buscas Exa hoje", True),
-    (last_update, "Última atualização", False),
-]))
-st.page_link("pages/tv.py", label="Abrir Modo TV (carrossel para a TV)", icon="📺")
+]
+if is_admin:  # uso da cota do Exa: só na visão de administrador
+    stats.append((f"{exa_today}/{exa_limit}", "Buscas Exa hoje", True))
+stats.append((last_update, "Última atualização", False))
+html(ui.header(stats))
+c_tv, _, c_admin = st.columns([3, 5, 2], vertical_alignment="center")
+c_tv.page_link("pages/tv.py", label="Abrir Modo TV (carrossel para a TV)", icon="📺")
+with c_admin:
+    auth.login_widget()
 html(ui.about(news["source"].value_counts().head(12).index.tolist() if len(news) else []))
 st.write("")
 
-tab_day, tab_hist, tab_run, tab_cfg = st.tabs(["Visão do dia", "Histórico", "Coleta e logs", "Configuração"])
+# Executivos veem só a Visão do dia; Histórico, Coleta e logs e Configuração são da visão de administrador.
+if is_admin:
+    tab_day, tab_hist, tab_run, tab_cfg = st.tabs(["Visão do dia", "Histórico", "Coleta e logs", "Configuração"])
+else:
+    tab_day = st.container()
 
 # ------------------------------------------------------------------ visão do dia
 with tab_day:
@@ -269,6 +279,10 @@ with tab_day:
                 continue
             html(ui.section_title(cat, len(group), ui.CAT_COLORS.get(cat)))
             render_cards(group, new_day=day, key="day")
+
+if not is_admin:  # visão do executivo termina aqui
+    html(ui.footer(f"Última atualização: {last_update} · Fuso {config.TZ.key}"))
+    st.stop()
 
 # ------------------------------------------------------------------ histórico
 with tab_hist:
