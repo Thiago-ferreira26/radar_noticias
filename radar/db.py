@@ -149,9 +149,26 @@ TABLES = ["runs", "searches", "news", "dossiers", "accounts", "exa_usage", "news
 IDENTITY_TABLES = ["runs", "searches", "news", "crm_leads", "errors"]
 
 
+def _encode_password(url: str) -> str:
+    """Codifica caracteres especiais da senha (ex.: '@' → '%40') quando a URL foi colada com a senha crua.
+    Usa o ÚLTIMO '@' da parte de autenticação como separador do host."""
+    from urllib.parse import quote, unquote
+
+    scheme, sep, rest = url.partition("://")
+    if not sep:
+        return url
+    netloc, slash, tail = rest.partition("/")
+    if netloc.count("@") <= 1:
+        return url
+    userinfo, host = netloc.rsplit("@", 1)
+    user, _, password = userinfo.partition(":")
+    return f"{scheme}://{user}:{quote(unquote(password), safe='')}@{host}{slash}{tail}"
+
+
 def database_url() -> str | None:
     """Postgres do Supabase (SUPABASE_DB_URL). Sem ela, o painel usa o SQLite local em data/radar.db."""
-    return config.secret("SUPABASE_DB_URL")
+    url = config.secret("SUPABASE_DB_URL")
+    return _encode_password(url) if url else None
 
 
 def backend() -> str:
@@ -188,10 +205,76 @@ class _PgConn:
 _pool = None
 
 
+class DatabaseConnectionError(RuntimeError):
+    """Falha ao conectar no Supabase, com o motivo real e a dica de correção (sem expor a senha)."""
+
+
+def describe_url(url: str | None = None) -> dict:
+    """Partes da SUPABASE_DB_URL para diagnóstico, com a senha mascarada."""
+    from psycopg.conninfo import conninfo_to_dict
+
+    try:
+        info = conninfo_to_dict(url or database_url() or "")
+    except Exception as exc:  # URL malformada
+        return {"erro": f"URL inválida: {type(exc).__name__}"}
+    return {k: ("***" if k == "password" else v) for k, v in info.items()}
+
+
+def _hints(info: dict) -> list[str]:
+    host, user, port = str(info.get("host", "")), str(info.get("user", "")), str(info.get("port", "5432"))
+    tips = []
+    if "@" in host or "@" in user or not host:
+        tips.append("A senha parece ter '@' sem codificar: na URL, troque cada '@' da senha por '%40' "
+                    "(ex.: minha@senha → minha%40senha).")
+    if host.startswith("db.") and host.endswith(".supabase.co"):
+        tips.append("O host direto db.<projeto>.supabase.co só tem IPv6 e não funciona no Streamlit Cloud. "
+                    "Use a URL do 'Session pooler': aws-1-us-west-2.pooler.supabase.com, porta 5432, "
+                    "usuário postgres.<projeto>.")
+    if host.endswith("pooler.supabase.com") and not user.startswith("postgres."):
+        tips.append("No pooler o usuário é 'postgres.<id-do-projeto>' (ex.: postgres.cbqflpapzmywfxcebjpa).")
+    if "[YOUR-PASSWORD]" in (database_url() or ""):
+        tips.append("Substitua [YOUR-PASSWORD] pela senha do banco.")
+    if port not in ("5432", "6543"):
+        tips.append(f"Porta {port} incomum: o Session pooler usa 5432.")
+    return tips
+
+
+def check_connection(timeout: int = 15) -> None:
+    """Abre uma conexão de teste e, se falhar, levanta DatabaseConnectionError com o motivo e as dicas."""
+    import psycopg
+
+    try:
+        psycopg.connect(database_url(), connect_timeout=timeout, prepare_threshold=None).close()
+    except Exception as exc:
+        from psycopg.conninfo import conninfo_to_dict
+
+        info = describe_url()
+        reason = " ".join(str(exc).split())
+        try:
+            password = conninfo_to_dict(database_url()).get("password") or ""
+        except Exception:
+            password = ""
+        if password:  # nunca mostrar a senha
+            reason = reason.replace(password, "***")
+        host = str(info.get("host", ""))
+        if "@" in host:  # '@' da senha sem codificar: o trecho antes do '@' é parte da senha
+            leaked, real_host = host.rsplit("@", 1)
+            reason = reason.replace(leaked + "@", "***@")
+            info["host"] = "***@" + real_host
+        shown = ", ".join(f"{k}={v}" for k, v in info.items() if k in ("host", "port", "user", "dbname", "erro"))
+        tips = _hints(info)
+        raise DatabaseConnectionError(
+            f"Não foi possível conectar ao Supabase ({shown}). Motivo: {reason[-400:]}"
+            + ("\n\nComo corrigir:\n- " + "\n- ".join(tips) if tips else "")
+        ) from None
+
+
 def _pg_pool():
     global _pool
     if _pool is None:
         from psycopg_pool import ConnectionPool
+
+        check_connection()  # mostra o erro real em vez de um "PoolTimeout" genérico
 
         # autocommit: cada comando é uma única ida e volta ao servidor (o Supabase pode estar longe, ~200 ms);
         # as operações do painel são de um comando só, e a migração usa transação explícita.

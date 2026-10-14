@@ -11,6 +11,7 @@ from pathlib import Path
 import streamlit as st
 import streamlit.components.v1 as components
 
+from radar import db
 from radar.tvdeck import build_deck
 
 st.set_page_config(page_title="Radar Cordeiro · TV", page_icon="📺", layout="wide",
@@ -42,7 +43,11 @@ cfg = {
     "coverMs": _int("capa", 12, 5, 120) * 1000,
     "refreshMin": _int("recarregar", 10, 1, 240),  # recarrega os dados ao voltar para a capa após N minutos
 }
-deck = build_deck(max_ops=_int("max", 24, 1, 60))
+try:
+    deck = build_deck(max_ops=_int("max", 24, 1, 60))
+except db.DatabaseConnectionError as exc:
+    st.error("**Banco de dados indisponível**\n\n" + str(exc).replace("\n", "  \n"))
+    st.stop()
 
 template = (Path(__file__).resolve().parent.parent / "radar" / "tv.html").read_text(encoding="utf-8")
 page = (template

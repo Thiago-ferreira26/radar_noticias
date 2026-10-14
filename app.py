@@ -16,7 +16,12 @@ from radar.classify import CATEGORIES
 
 st.set_page_config(page_title="Radar Cordeiro", page_icon="📡", layout="wide")
 st.markdown(ui.CSS, unsafe_allow_html=True)
-db.init_db()
+try:
+    db.init_db()
+except db.DatabaseConnectionError as exc:  # Supabase configurado, mas inacessível: mostra o motivo e para
+    st.error("**Banco de dados indisponível**\n\n" + str(exc).replace("\n", "  \n"))
+    st.caption("Confira SUPABASE_DB_URL em Settings → Secrets (Streamlit Cloud) ou no .env e recarregue a página.")
+    st.stop()
 if flash := st.session_state.pop("crm_flash", None):  # resultado do último envio ao Bitrix
     st.toast(flash)
 
