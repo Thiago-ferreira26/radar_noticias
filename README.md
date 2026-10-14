@@ -245,16 +245,44 @@ o DB Browser for SQLite).
 - O DuckDuckGo não tem API oficial e pode limitar as requisições. Quando isso acontece, a coleta
   tenta de novo e registra o erro, sem interromper as outras buscas.
 
+## Banco no Supabase (dados persistentes)
+
+Com `SUPABASE_DB_URL` configurada, o painel, a coleta e o agendador gravam no **Postgres do
+Supabase** em vez do `data/radar.db`. Os dados passam a sobreviver aos reinícios do Streamlit
+Cloud, e um computador rodando o agendamento diário alimenta o mesmo banco que o Cloud mostra.
+Com `SUPABASE_URL` e `SUPABASE_SERVICE_KEY`, as imagens vão para o bucket público `imagens` do
+Supabase Storage.
+
+1. **Copiar as credenciais para o `.env`** (ou para os Secrets do Cloud):
+   - `SUPABASE_DB_URL`: em *Project Settings → Database → Connection string*, escolha **Session
+     pooler** (funciona em IPv4, inclusive no Streamlit Cloud) e troque `[YOUR-PASSWORD]` pela
+     senha do banco.
+   - `SUPABASE_URL`: `https://cbqflpapzmywfxcebjpa.supabase.co`.
+   - `SUPABASE_SERVICE_KEY`: chave secreta (*service_role*) em *Project Settings → API*. Ela dá
+     acesso total ao projeto e nunca deve ir para o código nem para o GitHub.
+2. **Migrar o banco local e as imagens:**
+
+```bash
+.venv\Scripts\python.exe -m radar.migrar_supabase
+```
+
+A migração cria as tabelas, copia todos os dados, envia as imagens e confere as contagens. Pode
+ser rodada de novo sem duplicar nada. Sem `SUPABASE_DB_URL`, tudo continua no SQLite local, como
+antes.
+
 ## Publicar no Streamlit Community Cloud
 
 - **Chave do Exa:** em *Settings → Secrets*, adicione `EXA_API_KEY = "sua-chave"`. O app procura
   primeiro no `.env` e depois nos Secrets.
-- **Dados não persistem:** o disco do Cloud é temporário e o `data/` não vai para o GitHub. Por isso
-  o banco começa vazio a cada reinício, e as coletas, fichas importadas e imagens se perdem quando o
-  app reinicia.
-- **Sem agendamento:** o Cloud não roda o `scheduler.py`; só a coleta manual funciona.
-- **Uso diário:** para a rotina com histórico, mantenha o painel e o agendamento rodando num
-  computador ou servidor da empresa (seção 4).
+- **Dados persistentes:** configure também `SUPABASE_DB_URL`, `SUPABASE_URL` e
+  `SUPABASE_SERVICE_KEY` nos Secrets (veja "Banco no Supabase"). Sem elas, o Cloud usa um SQLite
+  temporário, que é apagado a cada reinício.
+- **Coleta diária:** o Cloud não roda o `scheduler.py`. Deixe o agendamento num computador da
+  empresa com o mesmo `.env`; ele grava no Supabase, e o painel do Cloud mostra as notícias do dia.
+- **Pooler:** o host direto `db.<projeto>.supabase.co` só tem IPv6 e não funciona no Cloud nem na
+  maioria das redes. Use a URL do **Session pooler** (`aws-1-us-west-2.pooler.supabase.com`).
+- **Segurança no Supabase:** as tabelas têm RLS ativo e nenhuma política, então as chaves públicas
+  (anon/publishable) não leem nem alteram nada pela API. O painel conecta como dono das tabelas.
 - **Avisos no console do navegador:** `Tracking Prevention blocked…`, `heap-api … 404`,
   `/api/v2/user/details 404`, `Unrecognized feature` e `allow-scripts and allow-same-origin` vêm da
   própria plataforma do Cloud e do navegador, não deste app, e podem ser ignorados.

@@ -29,6 +29,60 @@ IMG_DIR = config.BASE_DIR / "static" / "imagens"
 # Endereço RELATIVO: no Streamlit Cloud o app roda sob um subcaminho (/~/+/) e "/app/static/" (absoluto)
 # apontaria para fora dele, dando 404. Relativo funciona tanto na raiz quanto em subcaminhos.
 STATIC_URL = "app/static/imagens/"
+BUCKET = "imagens"
+
+
+# ---------------------------------------------------------------- Supabase Storage (opcional)
+def storage() -> tuple[str, str] | None:
+    """(SUPABASE_URL, SUPABASE_SERVICE_KEY) quando o Storage está configurado. Com ele, as imagens ficam
+    num bucket público do Supabase e sobrevivem aos reinícios do Streamlit Cloud; sem ele, em static/."""
+    key = config.secret("SUPABASE_SERVICE_KEY")
+    url = config.secret("SUPABASE_URL")
+    return (url.rstrip("/"), key) if url and key else None
+
+
+def _storage_headers(key: str, **extra) -> dict:
+    return {"Authorization": f"Bearer {key}", "apikey": key, **extra}
+
+
+def ensure_bucket() -> None:
+    st = storage()
+    if not st:
+        return
+    url, key = st
+    resp = requests.post(f"{url}/storage/v1/bucket", headers=_storage_headers(key),
+                         json={"id": BUCKET, "name": BUCKET, "public": True}, timeout=20)
+    if resp.status_code not in (200, 201) and "already exists" not in resp.text.lower()             and "duplicate" not in resp.text.lower():
+        raise RuntimeError(f"Não foi possível criar o bucket '{BUCKET}': HTTP {resp.status_code} {resp.text[:200]}")
+
+
+def upload(name: str) -> None:
+    """Envia static/imagens/<name> para o bucket (sobrescreve se já existir)."""
+    st = storage()
+    if not st:
+        return
+    url, key = st
+    with open(IMG_DIR / name, "rb") as f:
+        resp = requests.post(f"{url}/storage/v1/object/{BUCKET}/{name}", data=f.read(), timeout=60,
+                             headers=_storage_headers(key, **{"Content-Type": "image/jpeg", "x-upsert": "true",
+                                                              "Cache-Control": "max-age=31536000"}))
+    if resp.status_code not in (200, 201):
+        raise RuntimeError(f"Upload de {name} falhou: HTTP {resp.status_code} {resp.text[:200]}")
+
+
+def remove(name: str) -> None:
+    (IMG_DIR / name).unlink(missing_ok=True)
+    st = storage()
+    if st:
+        url, key = st
+        requests.delete(f"{url}/storage/v1/object/{BUCKET}/{name}", headers=_storage_headers(key), timeout=20)
+
+
+def public_url(name: str) -> str | None:
+    st = storage()
+    if st:
+        return f"{st[0]}/storage/v1/object/public/{BUCKET}/{name}"
+    return STATIC_URL + name if (IMG_DIR / name).exists() else None
 MAX_BYTES = 8_000_000
 MIN_W, MIN_H = 320, 180          # descarta ícones, logos e pixels de rastreamento
 MAX_SIZE = (1600, 1000)          # suficiente para uma TV Full HD
@@ -131,6 +185,7 @@ def _save(img: Image.Image, name: str) -> tuple[str, int, int]:
     img = img.convert("RGB")
     img.thumbnail(MAX_SIZE)
     img.save(IMG_DIR / name, "JPEG", quality=82, optimize=True, progressive=True)
+    upload(name)  # no-op sem Supabase Storage
     return name, img.width, img.height
 
 
@@ -174,8 +229,10 @@ def store_images(news_id: int, page_url: str, hints: list[str] | None = None) ->
         name, w, hgt = _save(img, f"{news_id}_{position}.jpg")
         with db.connect() as conn:
             conn.execute(
-                "INSERT OR REPLACE INTO news_images(news_id, position, source_url, file, width, height, sha1, ahash, "
-                "kind, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO news_images(news_id, position, source_url, file, width, height, sha1, ahash, "
+                "kind, created_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(news_id, position) DO UPDATE SET "
+                "source_url=excluded.source_url, file=excluded.file, width=excluded.width, height=excluded.height, "
+                "sha1=excluded.sha1, ahash=excluded.ahash, kind=excluded.kind, created_at=excluded.created_at",
                 (news_id, position, src, name, w, hgt, sha1, f"{visual:016x}", kind,
                  config.now().isoformat(timespec="seconds")),
             )
@@ -213,9 +270,10 @@ def purge_repeated() -> int:
         now = config.now().isoformat(timespec="seconds")
         for r, _ in hashes:
             if (r["news_id"], r["position"]) in bad:
-                conn.execute("INSERT OR IGNORE INTO image_blocklist(ahash, created_at) VALUES (?,?)", (r["ahash"], now))
+                conn.execute("INSERT INTO image_blocklist(ahash, created_at) VALUES (?,?) ON CONFLICT DO NOTHING",
+                             (r["ahash"], now))
                 conn.execute("DELETE FROM news_images WHERE news_id=? AND position=?", (r["news_id"], r["position"]))
-                (IMG_DIR / r["file"]).unlink(missing_ok=True)
+                remove(r["file"])
     if bad:
         log.info("%d imagens repetidas entre notícias removidas (anúncios/imagens-padrão).", len(bad))
     return len(bad)
@@ -227,8 +285,8 @@ def images_by_news() -> dict[int, list[str]]:
         rows = conn.execute("SELECT news_id, file FROM news_images ORDER BY news_id, position").fetchall()
     out: dict[int, list[str]] = {}
     for r in rows:
-        if (IMG_DIR / r["file"]).exists():
-            out.setdefault(r["news_id"], []).append(STATIC_URL + r["file"])
+        if src := public_url(r["file"]):
+            out.setdefault(r["news_id"], []).append(src)
     return out
 
 

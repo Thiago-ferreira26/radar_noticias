@@ -55,6 +55,11 @@ def load_accounts() -> dict:
 
 
 @st.cache_data(ttl=30, show_spinner=False)
+def load_sent() -> dict:
+    return crm.sent_by_news()
+
+
+@st.cache_data(ttl=30, show_spinner=False)
 def load_runs(limit: int = 50) -> pd.DataFrame:
     return db.read_sql("SELECT * FROM runs ORDER BY id DESC LIMIT ?", (limit,))
 
@@ -63,6 +68,7 @@ def refresh() -> None:
     load_news.clear()
     load_runs.clear()
     load_accounts.clear()
+    load_sent.clear()
 
 
 CARDS_PER_ROW = 3
@@ -87,6 +93,7 @@ def crm_button(r: dict, key: str, sent: dict | None) -> None:
             if res["ok"]:
                 # Recarrega a página para o card já mostrar o ID do lead e o responsável.
                 st.session_state["crm_flash"] = f"✅ {res['message']}"
+                load_sent.clear()
                 st.rerun()
             else:
                 st.toast(f"❌ Não foi possível enviar: {res['message']}")
@@ -96,7 +103,7 @@ def crm_button(r: dict, key: str, sent: dict | None) -> None:
 def render_cards(df: pd.DataFrame, new_day: str | None = None, limit: int | None = None, key: str = "c") -> None:
     rows = (df.head(limit) if limit else df).to_dict("records")
     accounts = load_accounts()
-    sent = crm.sent_by_news()
+    sent = load_sent()
     for start in range(0, len(rows), CARDS_PER_ROW):
         cols = st.columns(CARDS_PER_ROW, gap="small")
         for col, r in zip(cols, rows[start:start + CARDS_PER_ROW]):
