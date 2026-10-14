@@ -140,6 +140,12 @@ def auto_dossier(row: dict) -> dict:
     }
 
 
+def im_code(row) -> str:
+    from .ui import im_code as _im
+
+    return _im(row)
+
+
 def ui_date(value) -> str:
     from .ui import fmt_date
 
@@ -182,6 +188,7 @@ def as_text(row: dict, d: dict, accounts: dict) -> str:
                      f"Quando iniciar: {e.get('start', '—')}\nAvanço: {e.get('done', '—')}")
     parts = [
         row.get("title") or "",
+        f"LEAD IM: {im_code(row)}",
         f"ENTRADA DA CORDEIRO: {d.get('priority')}",
         f"FASE: {d.get('phase')}", d.get("phaseDetail") or "",
         f"EXECUTOR: {d.get('executor')}",

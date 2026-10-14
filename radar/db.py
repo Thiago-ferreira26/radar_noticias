@@ -103,6 +103,20 @@ CREATE TABLE IF NOT EXISTS image_blocklist (
     created_at    TEXT NOT NULL
 );
 
+-- Leads enviados ao Bitrix24 a partir dos cards (sucesso e erro).
+CREATE TABLE IF NOT EXISTS crm_leads (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    news_id       INTEGER REFERENCES news(id),
+    news_url      TEXT,
+    lead_id       INTEGER,                       -- ID do lead criado no Bitrix (se ok)
+    assigned_id   INTEGER NOT NULL,              -- ASSIGNED_BY_ID
+    assigned_name TEXT,
+    status        TEXT NOT NULL,                 -- ok | erro
+    message       TEXT,
+    response      TEXT,
+    sent_at       TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS errors (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     run_id        INTEGER REFERENCES runs(id),

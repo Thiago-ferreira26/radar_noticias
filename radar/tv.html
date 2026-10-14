@@ -188,7 +188,7 @@
             '<span class="dem">Demanda de guindaste/área: '+esc(d.demand)+'</span></div><p>'+esc(d.impacto)+'</p></div>' : '')+
           '<div class="entry"><b>Entrada da Cordeiro · '+esc(d.entrada)+'</b><span class="t">'+esc(d.fase)+' · '+esc(d.executor)+'</span></div>'+
         '</div></div>'+
-      '<div class="foot"><span>'+esc(d.source)+' · '+esc(d.date)+'</span><span class="sig">'+esc(d.signal)+'</span></div></div>';
+      '<div class="foot"><span>'+esc(d.im)+' · '+esc(d.source)+' · '+esc(d.date)+'</span><span class="sig">'+esc(d.signal)+'</span></div></div>';
   }
 
   var deck = [{type:"cover"}].concat(DATA.slides.map(function(s){ return {type:"op", doc:s}; }));

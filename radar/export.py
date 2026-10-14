@@ -13,6 +13,8 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
+from .ui import im_code
+
 TEAL, INK, SOFT, LINK = "1F5F5A", "233C38", "65736F", "166A9B"
 ZEBRA, EDIT = "F0F5F3", "FFF3CD"
 STATUS = ["Não iniciado", "Em contato", "Em cadastro", "Homologado", "Em cotação", "Proposta enviada",
@@ -24,7 +26,7 @@ def _rows(docs: list[tuple[dict, dict]], accounts: dict):
     """docs = [(linha da notícia, ficha)]"""
     opp, detail, used = [], [], set()
     for row, d in docs:
-        nid = str(d.get("newsletter_id") or row.get("id"))
+        nid = im_code(row)
         title = row.get("title") or ""
         accs = [k for k in d.get("accounts") or [] if k in accounts]
         used.update(accs)
@@ -72,14 +74,14 @@ def workbook_bytes(docs: list[tuple[dict, dict]], accounts: dict) -> bytes:
     opp, detail, contacts, register = _rows(docs, accounts)
     sheets = [
         ("Oportunidades", "Radar Cordeiro — oportunidades",
-         "Filtre a lista. Use o ID para consultar Roteiros. Responsável e andamento são campos para preencher.",
-         ["ID", "Notícia / projeto", "UF", "Conta / canal inicial", "Fase do projeto", "Prioridade",
+         "Filtre a lista. Use o Lead IM para consultar Roteiros. Responsável e andamento são campos para preencher.",
+         ["Lead IM", "Notícia / projeto", "UF", "Conta / canal inicial", "Fase do projeto", "Prioridade",
           "Serviço potencial", "Primeira ação", "Responsável", "Andamento"],
          opp, [14, 49, 12, 29, 30, 17, 40, 60, 22, 24], {8, 9}),
         ("Roteiros", "Roteiros por oportunidade",
-         "Filtre por ID e tópico. Etapas em dias úteis. Faixas internas são estimativas de planejamento, não SLAs. "
+         "Filtre por Lead IM e tópico. Etapas em dias úteis. Faixas internas são estimativas de planejamento, não SLAs. "
          "Espera do cliente separada.",
-         ["ID", "Notícia / projeto", "Tópico", "Passo", "Orientação", "Tempo interno estimado",
+         ["Lead IM", "Notícia / projeto", "Tópico", "Passo", "Orientação", "Tempo interno estimado",
           "Espera / fatores externos", "Quando iniciar", "Critério de avanço", "Fonte de contexto"],
          detail, [14, 49, 23, 9, 75, 33, 60, 58, 58, 28], set()),
         ("Contatos", "Empresas e contatos",

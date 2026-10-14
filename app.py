@@ -10,13 +10,15 @@ from datetime import date, timedelta
 import pandas as pd
 import streamlit as st
 
-from radar import config, db, dossier, export, images, ui
+from radar import config, crm, db, dossier, export, images, ui
 from radar.collector import run_collection
 from radar.classify import CATEGORIES
 
 st.set_page_config(page_title="Radar Cordeiro", page_icon="📡", layout="wide")
 st.markdown(ui.CSS, unsafe_allow_html=True)
 db.init_db()
+if flash := st.session_state.pop("crm_flash", None):  # resultado do último envio ao Bitrix
+    st.toast(flash)
 
 POT_RANK = {p: i for i, p in enumerate(ui.POTENTIALS)}
 
@@ -31,6 +33,7 @@ def load_news() -> pd.DataFrame:
     df["pot_rank"] = df["potential"].map(POT_RANK).fillna(9)
     df["sort_date"] = df["published_at"].fillna(df["collected_at"])
     df["uf_list"] = df["ufs"].fillna("").str.split(",")
+    df["lead_im"] = [ui.im_code(r) for r in df.to_dict("records")]
     # Ficha do executivo: pesquisada (importada da newsletter) ou preliminar gerada pelo roteiro padrão.
     researched = dossier.get_dossiers()
     accounts = dossier.get_accounts()
@@ -62,15 +65,47 @@ def refresh() -> None:
     load_accounts.clear()
 
 
-def render_cards(df: pd.DataFrame, new_day: str | None = None, limit: int | None = None) -> None:
-    rows = df.head(limit) if limit else df
+CARDS_PER_ROW = 3
+
+
+def crm_button(r: dict, key: str, sent: dict | None) -> None:
+    """Botão do card: escolher o usuário do Bitrix, confirmar e criar o lead (crm.lead.add)."""
+    label = f"✓ Enviado ao Bitrix · {sent['assigned_name']}" if sent else "Enviar para o Bitrix"
+    with st.popover(label, width="stretch"):
+        if sent:
+            st.caption(f"Já enviado em {ui.fmt_date(sent['sent_at'], True)} para **{sent['assigned_name']}** "
+                       f"(lead #{sent['lead_id']}). Enviar de novo cria outro lead.")
+        if not crm.is_configured():
+            st.warning("Configure BITRIX_WEBHOOK_URL no .env (ou em Secrets no Streamlit Cloud).")
+            return
+        user = st.selectbox("Responsável no Bitrix", crm.users(), index=None, format_func=lambda u: u["nome"],
+                            placeholder="Selecione o usuário", key=f"{key}_user")
+        st.caption(f"Título do lead: {r['title'][:120]}")
+        if st.button("Confirmar envio", type="primary", disabled=user is None, key=f"{key}_send", width="stretch"):
+            with st.spinner("Enviando ao Bitrix…"):
+                res = crm.send_lead(r, r["ficha"], user)
+            if res["ok"]:
+                # Recarrega a página para o card já mostrar o ID do lead e o responsável.
+                st.session_state["crm_flash"] = f"✅ {res['message']}"
+                st.rerun()
+            else:
+                st.toast(f"❌ Não foi possível enviar: {res['message']}")
+                st.error(res["message"])
+
+
+def render_cards(df: pd.DataFrame, new_day: str | None = None, limit: int | None = None, key: str = "c") -> None:
+    rows = (df.head(limit) if limit else df).to_dict("records")
     accounts = load_accounts()
-    cards = [
-        ui.card(r, is_new=(new_day is not None and r["collected_day"] == new_day),
-                ficha_html=ui.ficha(r, r["ficha"], accounts, r["ficha_texto"]), images=r["images"])
-        for r in rows.to_dict("records")
-    ]
-    html(ui.grid(cards))
+    sent = crm.sent_by_news()
+    for start in range(0, len(rows), CARDS_PER_ROW):
+        cols = st.columns(CARDS_PER_ROW, gap="small")
+        for col, r in zip(cols, rows[start:start + CARDS_PER_ROW]):
+            with col:
+                s = sent.get(r["id"])
+                html(ui.card(r, is_new=(new_day is not None and r["collected_day"] == new_day),
+                             ficha_html=ui.ficha(r, r["ficha"], accounts, r["ficha_texto"]), images=r["images"],
+                             crm_html=ui.crm_block(s, crm.lead_url(s["lead_id"]) if s else None)))
+                crm_button(r, f"{key}_crm_{r['id']}", s)
 
 
 VERTICALS = ["Energia", "Minerais", "Infraestrutura"]
@@ -121,7 +156,7 @@ def newsletter_filters(df: pd.DataFrame, key: str) -> pd.DataFrame:
     """Barra de filtros da newsletter: busca, vertical, potencial, prazo, categoria, região, fase,
     empresa executora e o botão "Baixar Excel organizado" (exporta o resultado filtrado)."""
     c_q, c_clear = st.columns([8.5, 1.5], vertical_alignment="bottom")
-    q = c_q.text_input("Buscar", placeholder="Buscar por palavra-chave, empresa, projeto…", key=f"{key}_q",
+    q = c_q.text_input("Buscar", placeholder="Buscar por palavra-chave, empresa, projeto ou Lead IM (ex.: IM-2026-0003)…", key=f"{key}_q",
                        label_visibility="collapsed")
     c_clear.button("Limpar filtros", key=f"{key}_clear", on_click=clear_filters, args=(key,), type="tertiary")
 
@@ -147,7 +182,8 @@ def newsletter_filters(df: pd.DataFrame, key: str) -> pd.DataFrame:
                             key=f"{key}_exec", label_visibility="collapsed")
 
     if q:
-        text = df["title"].fillna("") + " " + df["summary"].fillna("") + " " + df["source"].fillna("")
+        text = (df["lead_im"] + " " + df["title"].fillna("") + " " + df["summary"].fillna("") + " "
+                + df["source"].fillna(""))
         df = df[text.str.contains(q, case=False, regex=False)]
     if verts:
         df = df[df["vertical"].isin(verts)]
@@ -220,7 +256,7 @@ with tab_day:
             if group.empty:
                 continue
             html(ui.section_title(cat, len(group), ui.CAT_COLORS.get(cat)))
-            render_cards(group, new_day=day)
+            render_cards(group, new_day=day, key="day")
 
 # ------------------------------------------------------------------ histórico
 with tab_hist:
@@ -265,7 +301,7 @@ with tab_hist:
             df = df.sort_values("sort_date", ascending=(sort == "Mais antigas"))
 
         html(ui.section_title("Todas as oportunidades", len(df)))
-        table = df[["collected_at", "published_at", "category", "vertical", "ufs", "potential", "demand", "prazo",
+        table = df[["lead_im", "collected_at", "published_at", "category", "vertical", "ufs", "potential", "demand", "prazo",
                      "title", "summary", "source", "url", "term", "engine", "signal_type", "impacto", "times_seen",
                      "entrada", "fase", "executor", "ficha_origem"]]
         d1, d2, _ = st.columns([1, 1, 3])
@@ -285,7 +321,7 @@ with tab_hist:
             st.dataframe(
                 table, hide_index=True, width="stretch",
                 column_config={
-                    "url": st.column_config.LinkColumn("URL"),
+                    "url": st.column_config.LinkColumn("URL"), "lead_im": "Lead IM",
                     "collected_at": "Coleta", "published_at": "Publicação", "category": "Tema",
                     "potential": "Potencial", "title": "Título", "source": "Fonte", "term": "Termo",
                     "engine": "Mecanismo", "times_seen": "Vezes vista", "entrada": "Entrada da Cordeiro",
@@ -296,7 +332,7 @@ with tab_hist:
             page_size = 60
             pages = max(1, -(-len(df) // page_size))
             page = st.number_input(f"Página (de {pages})", 1, pages, 1) if pages > 1 else 1
-            render_cards(df.iloc[(page - 1) * page_size: page * page_size], new_day=today_key)
+            render_cards(df.iloc[(page - 1) * page_size: page * page_size], new_day=today_key, key="hist")
 
 # ------------------------------------------------------------------ coleta e logs
 with tab_run:

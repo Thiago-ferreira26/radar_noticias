@@ -163,6 +163,23 @@ h1,h2,h3{font-family:"IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;}
   border-radius:6px; padding:8px; background:var(--surface); color:var(--ink); resize:vertical;}
 .cord-copy small{display:block; color:var(--ink-faint); font-size:11px; margin-bottom:6px;}
 
+/* Código de rastreio da IM */
+.rc-im{display:flex; align-items:center; gap:8px;}
+.rc-im span{font-family:"IBM Plex Sans Condensed"; font-size:11px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.05em; color:var(--ink-faint);}
+.rc-im b{font-family:"IBM Plex Mono"; font-size:12.5px; font-weight:600; color:var(--teal-deep);
+  background:var(--amber-tint); border:1px solid var(--amber); border-radius:6px; padding:1px 8px;}
+
+/* Lead criado no Bitrix (dentro do card) */
+.rc-crm{border:1.5px solid var(--teal); background:var(--teal-tint); border-radius:9px; padding:9px 12px;}
+.rc-crm .lbl{font-family:"IBM Plex Sans Condensed"; font-size:11px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.05em; color:var(--teal); margin-bottom:4px;}
+.rc-crm .row{display:flex; justify-content:space-between; gap:8px; font-size:13px; line-height:1.6;}
+.rc-crm .row span{color:var(--ink-soft);}
+.rc-crm .row b{color:var(--ink); font-family:"IBM Plex Mono"; font-weight:600; text-align:right;}
+.rc-crm .row b a{color:var(--teal) !important; text-decoration:none;}
+.rc-crm .when{font-size:11px; color:var(--ink-faint); margin-top:2px;}
+
 /* Barra de filtros (chips da newsletter) */
 .rc-chiprow-label{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint);}
 .rc-sep{border:0; border-top:1px solid var(--border); margin:8px 0 10px;}
@@ -203,6 +220,7 @@ h1,h2,h3{font-family:"IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;}
 div.stButton > button[kind="primary"]{background:var(--amber); color:var(--teal-deep); border:none;
   font-family:"IBM Plex Sans Condensed"; font-weight:700; text-transform:uppercase; letter-spacing:.03em;}
 div.stButton > button[kind="primary"]:hover{background:var(--amber-deep); color:#fff;}
+div.stButton > button[kind="primary"]:disabled{background:var(--surface-alt); color:var(--ink-faint); cursor:not-allowed;}
 </style>
 """
 
@@ -372,7 +390,30 @@ def ficha(row: dict, d: dict, accounts: dict, text: str) -> str:
     )
 
 
-def card(row, is_new: bool = False, ficha_html: str = "", images: list[str] | None = None) -> str:
+def im_code(row) -> str:
+    """Código de rastreio da Inteligência de Mercado: IM-<ano da coleta>-<nº da notícia>, ex.: IM-2026-0003.
+    Único e estável (deriva do ID da notícia no banco); vai no card, no lead do Bitrix e nas exportações."""
+    year = str(row.get("collected_day") or row.get("collected_at") or "")[:4] or "0000"
+    return f"IM-{year}-{int(row.get('id') or 0):04d}"
+
+
+def crm_block(sent: dict | None, lead_url: str | None = None) -> str:
+    """Faixa do card com o lead criado no Bitrix: ID (com link para o lead) e usuário responsável."""
+    if not sent:
+        return ""
+    lead = f"#{h(sent['lead_id'])}"
+    if lead_url:
+        lead = f'<a href="{h(lead_url)}" target="_blank" rel="noopener">{lead} ↗</a>'
+    return (
+        '<div class="rc-crm"><div class="lbl">Lead no Bitrix</div>'
+        f'<div class="row"><span>ID do lead</span><b>{lead}</b></div>'
+        f'<div class="row"><span>Responsável</span><b>{h(sent["assigned_name"])}</b></div>'
+        f'<div class="when">Enviado em {fmt_date(sent["sent_at"], True)}</div></div>'
+    )
+
+
+def card(row, is_new: bool = False, ficha_html: str = "", images: list[str] | None = None,
+         crm_html: str = "") -> str:
     pot = row.get("potential") or "—"
     pc = POT_CLASS.get(pot, "pot-baixo")
     cat = row.get("category") or ""
@@ -398,9 +439,10 @@ def card(row, is_new: bool = False, ficha_html: str = "", images: list[str] | No
         f'<article class="rc-card {pc}">'
         + (f'<img class="rc-img" src="{h(images[0])}" alt="" loading="lazy">' if images else "") +
         f'<div class="rc-card-top"><div class="rc-tags">{vert_tag}{cat_tag}{uf_tags}</div>{new_badge}</div>'
+        f'<div class="rc-im"><span>Lead IM</span><b>{h(im_code(row))}</b></div>'
         f'<h3><a href="{h(row.get("url"))}" target="_blank" rel="noopener">{h(row.get("title") or "(sem título)")}</a></h3>'
         f'<p class="summary">{h(row.get("summary"))}</p>'
-        f"{impact}{ficha_html}"
+        f"{crm_html}{impact}{ficha_html}"
         f'<div class="rc-tags"><span class="rc-tag pot {pc}">{h(pot)}</span>{prazo}{signal}</div>'
         f'<div class="rc-term">Termo: “{h(row.get("term"))}” · <span class="rc-tag eng">{h(engine)}</span></div>'
         f'<div class="rc-meta"><span>{h(row.get("source"))}</span><span>{published}</span></div>'

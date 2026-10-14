@@ -1,0 +1,18 @@
+# Envio de oportunidades do Radar Cordeiro para o CRM Bitrix24 (crm.lead.add).
+# A URL do webhook (com o token) NÃO fica aqui: vai no .env / Secrets como BITRIX_WEBHOOK_URL.
+source_id: UC_DEXNWE          # Origem do lead no Bitrix (SOURCE_ID)
+
+# Usuários que podem receber o lead (ASSIGNED_BY_ID)
+usuarios:
+  - {id: 1188, nome: ALDELFREDO MENDES}
+  - {id: 1670, nome: BRUNO PESSOA}
+  - {id: 5317, nome: KARINE DOS SANTOS}
+  - {id: 5423, nome: CRISTIANO ASSIS}
+  - {id: 7379, nome: CRISTIANE LUCIO}
+  - {id: 15257, nome: FABRICIO MEDEIROS}
+  - {id: 15299, nome: FERNANDO OLIVEIRA}
+  - {id: 15311, nome: THIAGO FERREIRA}
+  - {id: 15409, nome: MARCIO FUGHI}
+  - {id: 15507, nome: CARLOS CAVALCANTE}
+  - {id: 15539, nome: ERIKA SANTOS}
+  - {id: 15597, nome: MARCELLO GONÇALVES}

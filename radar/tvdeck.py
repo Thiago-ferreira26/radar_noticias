@@ -6,6 +6,7 @@ from datetime import timedelta
 
 from . import config, db, dossier, images
 from .ui import POTENTIALS, UF_LABEL, VERT_COLORS, fmt_date
+from .ui import im_code as ui_im_code
 
 POT_RANK = {p: i for i, p in enumerate(POTENTIALS)}
 POT_COLORS = {"Muito Alto": "#a34a12", "Alto": "#c9761a", "Médio": "#a1441f", "Baixo": "#7c8b86"}
@@ -52,6 +53,7 @@ def build_deck(max_ops: int = 24) -> dict:
         f = dossier.dossier_for(r, researched)
         slides.append({
             "title": r["title"],
+            "im": ui_im_code(r),
             "summary": _trim(r.get("summary"), 520),
             "impacto": _trim(r.get("impacto"), 420),
             "demand": r.get("demand") or "",

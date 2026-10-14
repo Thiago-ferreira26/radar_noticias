@@ -77,6 +77,38 @@ As abas Visão do dia e Histórico usam a barra de filtros da newsletter: busca,
 
 Os chips de Categoria e Região mostram só o que existe na base.
 
+### Enviar oportunidade para o Bitrix24
+
+Cada card tem o botão **Enviar para o Bitrix**. Ele abre a lista de usuários; depois de
+escolher o responsável e clicar em **Confirmar envio**, o painel cria um lead via `crm.lead.add`:
+
+| Campo do lead | Conteúdo |
+|---|---|
+| `TITLE` | `[Lead IM]` + título da notícia, ex.: `[IM-2026-0003] Beach Park inaugura…` |
+| `COMMENTS` | corpo: resumo, potencial, vertical/categoria, UF, prazo, impacto, entrada da Cordeiro, fase, executor, serviço, próximo passo, fonte e link |
+| `ASSIGNED_BY_ID` | usuário escolhido |
+| `SOURCE_ID` | origem definida em `config/bitrix.yaml` |
+| `SOURCE_DESCRIPTION` | "Radar Cordeiro" + link da notícia |
+
+- **Configuração:** a URL do webhook (com o token) fica em `BITRIX_WEBHOOK_URL`, no `.env` ou nos
+  Secrets do Streamlit Cloud, no formato `https://<conta>.bitrix24.com.br/rest/<id>/<token>/`.
+- **Usuários e origem:** a lista de usuários e o `SOURCE_ID` ficam em `config/bitrix.yaml`.
+- **Registro:** cada envio fica na tabela `crm_leads`. O card passa a mostrar "✓ Enviado ao Bitrix"
+  com o responsável. Enviar de novo cria outro lead.
+- **Erros:** falhas aparecem na tela e no log de erros.
+- **No card:** depois do envio, aparece a faixa **Lead no Bitrix**, com o ID do lead (o link abre o lead
+  no Bitrix), o usuário responsável e a data do envio.
+
+### Lead IM (código de rastreio)
+
+Todo card tem um **Lead IM** no formato `IM-AAAA-NNNN`: o ano da coleta e o número da notícia na
+base. Ele é único e não muda.
+
+- **Onde aparece:** no card, no título e no corpo do lead do Bitrix, na ficha em texto, no CSV, no
+  Excel (a coluna que liga Oportunidades e Roteiros) e no rodapé dos slides da TV.
+- **Para que serve:** no Bitrix, buscar por `IM-` mostra todos os leads vindos da Inteligência de
+  Mercado; no painel, a busca também aceita o código.
+
 ### Ficha do executivo
 
 Cada card traz o bloco **Entrada da Cordeiro** (prioridade, fase e executor) e a **Ficha do
@@ -201,6 +233,7 @@ Coleta avulsa pela linha de comando:
 | `accounts`  | canais oficiais de fornecedores das empresas (contatos e cadastro) |
 | `news_images` | até 2 imagens por notícia: arquivo, origem, tamanho e hash visual |
 | `image_blocklist` | hashes de imagens repetidas entre notícias (anúncios), ignoradas nas próximas coletas |
+| `crm_leads` | leads enviados ao Bitrix: notícia, lead criado, responsável, status e resposta |
 
 Para consultar o banco fora do painel, abra `data/radar.db` em qualquer cliente SQLite (por exemplo,
 o DB Browser for SQLite).

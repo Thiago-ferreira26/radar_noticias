@@ -21,16 +21,27 @@ LOG_DIR = BASE_DIR / "logs"
 EXA_HARD_LIMIT = 5
 
 
-def exa_api_key() -> str | None:
-    key = os.getenv("EXA_API_KEY", "").strip()
-    if not key:  # Streamlit Community Cloud: a chave fica em Settings → Secrets (EXA_API_KEY = "...")
+def secret(name: str) -> str | None:
+    """Lê um segredo do .env ou, no Streamlit Community Cloud, de Settings → Secrets (NOME = "...")."""
+    value = os.getenv(name, "").strip()
+    if not value:
         try:
             import streamlit as st
 
-            key = str(st.secrets.get("EXA_API_KEY", "")).strip()
+            value = str(st.secrets.get(name, "")).strip()
         except Exception:  # sem streamlit ou sem secrets.toml (ex.: coleta pela linha de comando)
-            key = ""
-    return key or None
+            value = ""
+    return value or None
+
+
+def exa_api_key() -> str | None:
+    return secret("EXA_API_KEY")
+
+
+def bitrix_webhook_url() -> str | None:
+    """URL base do webhook de entrada do Bitrix24, ex.: https://<conta>.bitrix24.com.br/rest/<id>/<token>/"""
+    url = secret("BITRIX_WEBHOOK_URL")
+    return url.rstrip("/") + "/" if url else None
 
 
 def now() -> datetime:
