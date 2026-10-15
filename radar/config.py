@@ -38,6 +38,10 @@ def exa_api_key() -> str | None:
     return secret("EXA_API_KEY")
 
 
+def firecrawl_api_key() -> str | None:
+    return secret("FIRECRAWL_API_KEY")
+
+
 def bitrix_webhook_url() -> str | None:
     """URL base do webhook de entrada do Bitrix24, ex.: https://<conta>.bitrix24.com.br/rest/<id>/<token>/"""
     url = secret("BITRIX_WEBHOOK_URL")
@@ -55,6 +59,8 @@ def today() -> date:
 DEFAULTS = {
     "exa": {"limite_diario": EXA_HARD_LIMIT, "dias_retroativos": 7, "resultados_por_busca": 10},
     "ddg": {"regiao": "br-pt", "periodo": "w", "resultados_por_busca": 15, "pausa_segundos": 2.0},
+    # Firecrawl: cada busca consome créditos (~2 por 10 notícias); o limite diário controla o gasto.
+    "firecrawl": {"ativo": True, "limite_diario": 10, "resultados_por_busca": 10, "periodo": "w"},
     "classificacao": {
         "ufs_prioritarias": ["CE", "PA"],
         "ufs_atuacao": ["MA", "PI", "RN", "PB", "PE", "AL", "SE", "BA"],
@@ -96,6 +102,7 @@ def iter_terms(cfg: dict, only_active: bool = True):
                 "tema": theme.get("nome", "Geral"),
                 "texto": str(term.get("texto", "")).strip(),
                 "exa": bool(term.get("exa", False)),
+                "firecrawl": bool(term.get("firecrawl", False)),
                 "prioridade": int(term.get("prioridade", 3)),
                 "ativo": bool(term.get("ativo", True)),
             }

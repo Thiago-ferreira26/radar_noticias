@@ -15,7 +15,7 @@ CAT_COLORS = {
 VERT_COLORS = {"Energia": "#2f7fa8", "Minerais": "#a8752f", "Infraestrutura": "#4a6a86"}
 POTENTIALS = ["Muito Alto", "Alto", "Médio", "Baixo"]
 POT_CLASS = {"Muito Alto": "pot-muito-alto", "Alto": "pot-alto", "Médio": "pot-medio", "Baixo": "pot-baixo"}
-ENGINE_LABEL = {"exa": "Exa", "duckduckgo": "DuckDuckGo", "newsletter": "Newsletter"}
+ENGINE_LABEL = {"exa": "Exa", "firecrawl": "Firecrawl", "duckduckgo": "DuckDuckGo", "newsletter": "Newsletter"}
 UF_LABEL = {
     "AC": "Acre", "AL": "Alagoas", "AP": "Amapá", "AM": "Amazonas", "BA": "Bahia", "CE": "Ceará",
     "DF": "Distrito Federal", "ES": "Espírito Santo", "GO": "Goiás", "MA": "Maranhão", "MT": "Mato Grosso",
@@ -483,12 +483,12 @@ def empty(msg: str) -> str:
     return f'<div class="rc-empty">{h(msg)}</div>'
 
 
-def exa_meter(used: int, limit: int) -> str:
+def exa_meter(used: int, limit: int, label: str = "Buscas Exa hoje", extra: str = "") -> str:
     pct = 0 if not limit else min(100, round(used / limit * 100))
     return (
-        '<div class="rc-meter"><div class="lbl">Buscas Exa hoje</div>'
+        f'<div class="rc-meter"><div class="lbl">{h(label)}</div>'
         f'<div class="val">{used} / {limit}</div><div class="trk"><i style="width:{pct}%"></i></div>'
-        f"<small>{max(0, limit - used)} restante(s). O contador zera à meia-noite (America/Fortaleza).</small></div>"
+        f"<small>{max(0, limit - used)} restante(s). {h(extra)} O contador zera à meia-noite (America/Fortaleza).</small></div>"
     )
 
 

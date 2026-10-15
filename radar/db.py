@@ -63,6 +63,15 @@ CREATE TABLE IF NOT EXISTS news (
 CREATE INDEX IF NOT EXISTS ix_news_day ON news(collected_day);
 CREATE INDEX IF NOT EXISTS ix_news_pub ON news(published_at);
 
+-- Uso diário de APIs pagas além do Exa (ex.: firecrawl): buscas e créditos.
+CREATE TABLE IF NOT EXISTS api_usage (
+    engine        TEXT NOT NULL,
+    day           TEXT NOT NULL,                 -- YYYY-MM-DD (fuso local)
+    used          INTEGER NOT NULL DEFAULT 0,    -- buscas feitas
+    credits       INTEGER NOT NULL DEFAULT 0,    -- créditos informados pela API
+    PRIMARY KEY (engine, day)
+);
+
 CREATE TABLE IF NOT EXISTS exa_usage (
     day           TEXT PRIMARY KEY,              -- YYYY-MM-DD (fuso local)
     used          INTEGER NOT NULL DEFAULT 0
@@ -142,10 +151,11 @@ def _ts() -> str:
 
 # Colunas acrescentadas depois da primeira versão do esquema (migração automática).
 EXTRA_COLUMNS = [("news", "manual_class", "INTEGER DEFAULT 0"),  # 1 = classificação do analista (newsletter)
-                 ("news_images", "ahash", "TEXT"), ("news_images", "kind", "TEXT")]
+                 ("news_images", "ahash", "TEXT"), ("news_images", "kind", "TEXT"),
+                 ("runs", "firecrawl_used", "INTEGER DEFAULT 0")]
 # Ordem de cópia/criação respeitando as chaves estrangeiras.
-TABLES = ["runs", "searches", "news", "dossiers", "accounts", "exa_usage", "news_images", "image_blocklist",
-          "crm_leads", "errors"]
+TABLES = ["runs", "searches", "news", "dossiers", "accounts", "exa_usage", "api_usage", "news_images",
+          "image_blocklist", "crm_leads", "errors"]
 IDENTITY_TABLES = ["runs", "searches", "news", "crm_leads", "errors"]
 
 
@@ -406,6 +416,28 @@ def reserve_exa_call(day: str, limit: int) -> bool:
         conn.execute("INSERT INTO exa_usage(day, used) VALUES (?, 0) ON CONFLICT DO NOTHING", (day,))
         cur = conn.execute("UPDATE exa_usage SET used = used + 1 WHERE day=? AND used < ?", (day, limit))
         return cur.rowcount == 1
+
+
+def api_used(engine: str, day: str) -> dict:
+    with connect() as conn:
+        row = conn.execute("SELECT used, credits FROM api_usage WHERE engine=? AND day=?", (engine, day)).fetchone()
+        return {"used": row["used"], "credits": row["credits"]} if row else {"used": 0, "credits": 0}
+
+
+def reserve_api_call(engine: str, day: str, limit: int) -> bool:
+    """Reserva atomicamente uma busca do mecanismo no dia. False se o limite já foi atingido."""
+    with connect() as conn:
+        conn.execute("INSERT INTO api_usage(engine, day, used, credits) VALUES (?, ?, 0, 0) ON CONFLICT DO NOTHING",
+                     (engine, day))
+        cur = conn.execute("UPDATE api_usage SET used = used + 1 WHERE engine=? AND day=? AND used < ?",
+                           (engine, day, limit))
+        return cur.rowcount == 1
+
+
+def add_api_credits(engine: str, day: str, credits: int) -> None:
+    if credits:
+        with connect() as conn:
+            conn.execute("UPDATE api_usage SET credits = credits + ? WHERE engine=? AND day=?", (credits, engine, day))
 
 
 # ---------------------------------------------------------------- leitura p/ painel

@@ -207,7 +207,9 @@ def newsletter_filters(df: pd.DataFrame, key: str) -> pd.DataFrame:
     if sel_cats:
         df = df[df["category"].isin(sel_cats)]
     if sel_ufs:
-        df = df[df["uf_list"].apply(lambda lst: any(u in lst for u in sel_ufs))]
+        # astype(bool): com df vazio, apply devolve uma série "object" e o pandas a trataria como lista de
+        # colunas (resultado sem colunas → KeyError 'potential' adiante); como bool, é sempre um filtro.
+        df = df[df["uf_list"].apply(lambda lst: any(u in lst for u in sel_ufs)).astype(bool)]
     if fase != "Todas as fases":
         df = df[df["fase"] == fase]
     if executor != "Todas as situações":
@@ -231,6 +233,8 @@ today_key = config.today().isoformat()
 cfg = config.load_config()
 exa_limit = cfg["exa"]["limite_diario"]
 exa_today = db.exa_used(today_key)
+fc_limit = int(cfg["firecrawl"].get("limite_diario", 10))
+fc_today = db.api_used("firecrawl", today_key)
 finished = runs[runs["finished_at"].notna()]
 last_update = ui.fmt_date(finished.iloc[0]["finished_at"], with_time=True) if len(finished) else "—"
 
@@ -242,6 +246,7 @@ stats = [
 ]
 if is_admin:  # uso da cota do Exa: só na visão de administrador
     stats.append((f"{exa_today}/{exa_limit}", "Buscas Exa hoje", True))
+    stats.append((f"{fc_today['used']}/{fc_limit}", "Buscas Firecrawl hoje", True))
 stats.append((last_update, "Última atualização", False))
 html(ui.header(stats))
 c_tv, _, c_admin = st.columns([3, 5, 2], vertical_alignment="center")
@@ -366,13 +371,18 @@ with tab_run:
     c1, c2 = st.columns([1, 2])
     with c1:
         html(ui.exa_meter(exa_today, exa_limit))
+        st.write("")
+        html(ui.exa_meter(fc_today["used"], fc_limit, "Buscas Firecrawl hoje",
+                          f"{fc_today['credits']} créditos usados hoje."))
     with c2:
         running = db.active_run()
         st.markdown("**Coleta manual**")
-        st.caption("Executa Exa (apenas se ainda houver cota no dia) e DuckDuckGo para todos os termos ativos. "
+        st.caption("Executa Exa e Firecrawl (até o limite diário de cada um) e DuckDuckGo para todos os termos ativos. "
                    "Pode levar alguns minutos.")
         if not config.exa_api_key():
-            st.warning("EXA_API_KEY não encontrada (.env ou Secrets do Streamlit Cloud) — a coleta usará apenas o DuckDuckGo.")
+            st.warning("EXA_API_KEY não encontrada (.env ou Secrets do Streamlit Cloud) — buscas Exa ignoradas.")
+        if not config.firecrawl_api_key():
+            st.warning("FIRECRAWL_API_KEY não encontrada (.env ou Secrets do Streamlit Cloud) — buscas Firecrawl ignoradas.")
         if running:
             st.info(f"Coleta #{running['id']} em andamento desde {ui.fmt_date(running['started_at'], True)}.")
         if st.button("Executar coleta agora", type="primary", disabled=bool(running)):
@@ -399,11 +409,11 @@ with tab_run:
     else:
         st.dataframe(
             runs[["id", "trigger", "status", "started_at", "finished_at", "n_searches", "n_results", "n_new",
-                  "exa_used", "n_errors", "message"]],
+                  "exa_used", "firecrawl_used", "n_errors", "message"]],
             hide_index=True, width="stretch",
             column_config={"id": "#", "trigger": "Origem", "status": "Status", "started_at": "Início", "finished_at": "Fim",
                            "n_searches": "Buscas", "n_results": "Resultados", "n_new": "Novas",
-                           "exa_used": "Exa", "n_errors": "Erros", "message": "Resumo"},
+                           "exa_used": "Exa", "firecrawl_used": "Firecrawl", "n_errors": "Erros", "message": "Resumo"},
         )
         run_id = st.selectbox("Detalhar buscas da execução", runs["id"].tolist())
         searches = db.read_sql(
@@ -429,7 +439,7 @@ with tab_run:
 with tab_cfg:
     st.caption(f"Arquivo: `{config.TERMS_PATH}`. Alterações aqui sobrescrevem o arquivo (comentários são perdidos).")
     terms_df = pd.DataFrame(list(config.iter_terms(cfg, only_active=False)),
-                            columns=["tema", "texto", "exa", "prioridade", "ativo"])
+                            columns=["tema", "texto", "exa", "firecrawl", "prioridade", "ativo"])
     theme_opts = list(dict.fromkeys(CATEGORIES + terms_df["tema"].tolist()))
     edited = st.data_editor(
         terms_df, num_rows="dynamic", hide_index=True, width="stretch",
@@ -437,6 +447,8 @@ with tab_cfg:
             "tema": st.column_config.SelectboxColumn("Tema", options=theme_opts, required=True),
             "texto": st.column_config.TextColumn("Termo de busca", required=True, width="large"),
             "exa": st.column_config.CheckboxColumn("Usar no Exa", default=False),
+            "firecrawl": st.column_config.CheckboxColumn("Usar no Firecrawl", default=False,
+                                                         help="Sem nenhum marcado, usa todos por prioridade (rodízio)"),
             "prioridade": st.column_config.NumberColumn("Prioridade", min_value=1, max_value=5, step=1, default=3),
             "ativo": st.column_config.CheckboxColumn("Ativo", default=True),
         },
@@ -455,12 +467,22 @@ with tab_cfg:
     exa_days = c3.number_input("Exa: publicado nos últimos N dias", 1, 60, int(cfg["exa"].get("dias_retroativos", 7)))
     excl = c3.text_area("Excluir notícias que contenham (uma por linha)", "\n".join(cfg.get("excluir_se_contiver", [])))
 
+    f1, f2, f3, f4 = st.columns(4)
+    fc_on = f1.toggle("Firecrawl ativo", value=bool(cfg["firecrawl"].get("ativo", True)))
+    fc_lim = f2.number_input("Limite diário Firecrawl (buscas)", 0, 200, fc_limit,
+                             help="Cada busca consome créditos (~2 por 10 notícias).")
+    fc_n = f3.number_input("Resultados por busca (Firecrawl)", 1, 50, int(cfg["firecrawl"].get("resultados_por_busca", 10)))
+    fc_per = f4.selectbox("Período Firecrawl", ["d", "w", "m"],
+                          index=["d", "w", "m"].index(cfg["firecrawl"].get("periodo", "w")),
+                          format_func={"d": "Último dia", "w": "Última semana", "m": "Último mês"}.get)
+
     if st.button("Salvar configuração", type="primary"):
         rows = edited.dropna(subset=["texto"])
         rows = rows[rows["texto"].astype(str).str.strip() != ""]
         temas = []
         for tema in dict.fromkeys(rows["tema"].fillna("Geral")):
-            termos = [{"texto": str(r.texto).strip(), "exa": bool(r.exa), "prioridade": int(r.prioridade) if pd.notna(r.prioridade) else 3,
+            termos = [{"texto": str(r.texto).strip(), "exa": bool(r.exa),
+                       "firecrawl": bool(r.firecrawl) if pd.notna(r.firecrawl) else False, "prioridade": int(r.prioridade) if pd.notna(r.prioridade) else 3,
                        "ativo": bool(r.ativo if pd.notna(r.ativo) else True)}
                       for r in rows[rows["tema"].fillna("Geral") == tema].itertuples()]
             temas.append({"nome": tema, "termos": termos})
@@ -468,6 +490,8 @@ with tab_cfg:
         cfg["ddg"].update({"periodo": periodo, "resultados_por_busca": int(ddg_n)})
         cfg["exa"].update({"limite_diario": int(exa_lim), "resultados_por_busca": int(exa_n),
                            "dias_retroativos": int(exa_days)})
+        cfg["firecrawl"].update({"ativo": bool(fc_on), "limite_diario": int(fc_lim),
+                                 "resultados_por_busca": int(fc_n), "periodo": fc_per})
         cfg["excluir_se_contiver"] = [w.strip() for w in excl.splitlines() if w.strip()]
         config.save_config(cfg)
         st.success(f"Configuração salva: {len(rows)} termos em {len(temas)} temas.")

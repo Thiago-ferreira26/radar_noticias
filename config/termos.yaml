@@ -1,7 +1,8 @@
 # Termos de busca do Radar Cordeiro.
 # Pode ser editado aqui ou na aba "Configuração" do painel.
 #  - exa: true      -> o termo concorre às buscas Exa (máx. 5 por dia; rodízio diário se houver mais)
-#  - prioridade     -> 1 = mais importante (ordem de escolha para o Exa)
+#  - firecrawl: true -> o termo concorre às buscas Firecrawl (sem nenhum marcado: todos, por prioridade)
+#  - prioridade     -> 1 = mais importante (ordem de escolha para o Exa e o Firecrawl)
 #  - ativo: false   -> mantém o termo no arquivo sem buscar
 exa:
   limite_diario: 5          # nunca passa de 5, mesmo que se coloque um número maior
@@ -12,6 +13,11 @@ ddg:
   periodo: w                # d = dia, w = semana, m = mês
   resultados_por_busca: 15
   pausa_segundos: 2         # intervalo entre buscas para evitar bloqueio
+firecrawl:
+  ativo: true
+  limite_diario: 10         # buscas por dia; cada busca consome créditos (~2 por 10 notícias)
+  resultados_por_busca: 10
+  periodo: w                # d = dia, w = semana, m = mês
 classificacao:
   ufs_prioritarias: [CE, PA]
   ufs_atuacao: [MA, PI, RN, PB, PE, AL, SE, BA]

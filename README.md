@@ -220,11 +220,20 @@ Coleta avulsa pela linha de comando:
    porque pode ter sido cobrada. Entram no Exa os termos marcados `exa: true`, em ordem de
    prioridade. Se houver mais de 5 marcados, os termos entram em rodízio diário. Os filtros usados
    são `userLocation: "BR"`, `category: "news"` e publicação nos últimos N dias.
-2. **DuckDuckGo** (biblioteca `ddgs`): busca de notícias para todos os termos ativos, com região
+2. **Firecrawl** (`/v2/search`, notícias): busca restrita ao Brasil (`country: BR`), com período
+   configurável (dia, semana ou mês).
+   - **Limite:** cada busca consome créditos (cerca de 2 a cada 10 notícias), então há um **limite
+     diário de buscas** (padrão: 10), reservado no banco antes de cada chamada.
+   - **Registro:** o uso e os créditos do dia ficam na tabela `api_usage` e aparecem para o
+     administrador.
+   - **Termos:** entram os marcados `firecrawl: true`; sem nenhum marcado, todos, por prioridade e
+     com rodízio diário.
+   - **Chave:** `FIRECRAWL_API_KEY`, no `.env` ou nos Secrets.
+3. **DuckDuckGo** (biblioteca `ddgs`): busca de notícias para todos os termos ativos, com região
    `br-pt`, período configurável (dia, semana ou mês) e uma pausa entre buscas para evitar bloqueio.
-3. **Deduplicação**: a URL é normalizada (sem `utm_*`, fragmento ou barra final) e é única no banco.
+4. **Deduplicação**: a URL é normalizada (sem `utm_*`, fragmento ou barra final) e é única no banco.
    Quando uma notícia reaparece, o banco só atualiza `times_seen` e `last_seen_at`.
-4. **Classificação automática** (`radar/classify.py`): regras que seguem os critérios de potencial
+5. **Classificação automática** (`radar/classify.py`): regras que seguem os critérios de potencial
    da newsletter (relação com içamento, UF dentro da área de atuação, decisão pendente ou obra em
    andamento, porte financeiro). Elas atribuem vertical, categoria, UF, prazo, potencial, demanda e
    o texto "Impacto para a Cordeiro". **É uma triagem por palavras-chave, não uma análise.** Nas 52

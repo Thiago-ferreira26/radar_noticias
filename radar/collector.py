@@ -31,12 +31,12 @@ def setup_logging() -> None:
     log.setLevel(logging.INFO)
 
 
-def select_exa_terms(terms: list[dict], remaining: int, day_ordinal: int) -> list[dict]:
+def select_exa_terms(terms: list[dict], remaining: int, day_ordinal: int, flag: str = "exa") -> list[dict]:
     """Escolhe até `remaining` termos para o Exa. Usa os marcados com exa=true (por prioridade);
     se houver mais termos que cota, faz rodízio diário para cobrir todos ao longo dos dias."""
     if remaining <= 0:
         return []
-    pool = [t for t in terms if t["exa"]] or list(terms)
+    pool = [t for t in terms if t.get(flag)] or list(terms)
     pool.sort(key=lambda t: t["prioridade"])
     if len(pool) <= remaining:
         return pool
@@ -86,7 +86,7 @@ def run_collection(trigger: str = "manual", progress=None) -> dict:
     day_key = day.isoformat()
     exa_limit = cfg["exa"]["limite_diario"]
     terms = list(config.iter_terms(cfg))
-    stats = {"n_searches": 0, "n_results": 0, "n_new": 0, "n_errors": 0, "exa_used": 0}
+    stats = {"n_searches": 0, "n_results": 0, "n_new": 0, "n_errors": 0, "exa_used": 0, "firecrawl_used": 0}
     image_jobs: list[tuple[int, str, list[str]]] = []  # notícias novas que receberão imagens no fim
     log.info("Coleta #%s (%s) iniciada com %d termos.", run_id, trigger, len(terms))
 
@@ -107,7 +107,14 @@ def run_collection(trigger: str = "manual", progress=None) -> dict:
         elif remaining == 0:
             log.info("Cota diária do Exa já utilizada (%d/%d).", exa_limit, exa_limit)
 
-        total_steps = len(exa_terms) + len(terms) or 1
+        # Firecrawl: limite diário configurável (cada busca consome créditos), reservado antes da chamada
+        fc_cfg = cfg["firecrawl"]
+        fc_key = config.firecrawl_api_key() if fc_cfg.get("ativo", True) else None
+        fc_limit = int(fc_cfg.get("limite_diario", 10))
+        fc_remaining = max(0, fc_limit - db.api_used("firecrawl", day_key)["used"])
+        fc_terms = select_exa_terms(terms, fc_remaining, day.toordinal(), flag="firecrawl") if fc_key else []
+
+        total_steps = len(exa_terms) + len(fc_terms) + len(terms) or 1
         step = 0
         for term in exa_terms:
             step += 1
@@ -126,6 +133,26 @@ def run_collection(trigger: str = "manual", progress=None) -> dict:
             except Exception as exc:
                 db.log_search(run_id, "exa", term["texto"], term["tema"], status="erro",
                               error=fail("exa", term["texto"], exc))
+
+        # ---------------- Firecrawl (notícias, Brasil)
+        for term in fc_terms:
+            step += 1
+            say(step / total_steps, f"Firecrawl: {term['texto']}")
+            if not db.reserve_api_call("firecrawl", day_key, fc_limit):
+                log.info("Limite diário do Firecrawl atingido durante a execução.")
+                break
+            stats["firecrawl_used"] += 1
+            stats["n_searches"] += 1
+            try:
+                results, credits = engines.search_firecrawl(term["texto"], fc_key, cfg)
+                db.add_api_credits("firecrawl", day_key, credits)
+                new = _store_results(results, term, "firecrawl", run_id, cfg, image_jobs)
+                stats["n_results"] += len(results)
+                stats["n_new"] += new
+                db.log_search(run_id, "firecrawl", term["texto"], term["tema"], len(results), new)
+            except Exception as exc:
+                db.log_search(run_id, "firecrawl", term["texto"], term["tema"], status="erro",
+                              error=fail("firecrawl", term["texto"], exc))
 
         # ---------------- DuckDuckGo: todos os termos ativos
         pause = float(cfg["ddg"].get("pausa_segundos", 2))
@@ -159,7 +186,8 @@ def run_collection(trigger: str = "manual", progress=None) -> dict:
 
     db.finish_run(run_id, status, message, **stats)
     say(1.0, "Concluído")
-    log.info("Coleta #%s finalizada (%s): %s Exa usado: %d.", run_id, status, message, stats["exa_used"])
+    log.info("Coleta #%s finalizada (%s): %s Exa: %d, Firecrawl: %d.", run_id, status, message,
+             stats["exa_used"], stats["firecrawl_used"])
     return {"run_id": run_id, "status": status, "message": message, **stats}
 
 

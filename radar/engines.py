@@ -121,6 +121,77 @@ def search_exa(query: str, api_key: str, cfg: dict) -> list[dict]:
     return results
 
 
+# ------------------------------------------------------------ Firecrawl
+FIRECRAWL_URL = "https://api.firecrawl.dev/v2/search"
+TBS_BY_PERIOD = {"d": "qdr:d", "w": "qdr:w", "m": "qdr:m"}
+_REL_DATE = re.compile(r"(\d+)\s*(minute|min|hour|hora|day|dia|week|semana|month|m[eê]s)", re.I)
+_MONTHS = {m: i for i, m in enumerate(
+    ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
+_MONTHS.update({"fev": 2, "abr": 4, "mai": 5, "ago": 8, "set": 9, "out": 10, "dez": 12})
+
+
+def parse_news_date(value) -> str | None:
+    """Datas do Firecrawl/Google Notícias: "2 days ago", "há 3 horas", "Oct 12, 2026" ou ISO."""
+    if not value:
+        return None
+    text = str(value).strip()
+    iso = to_local_iso(text)
+    if iso:
+        return iso
+    now = datetime.now(timezone.utc)
+    if m := _REL_DATE.search(text):
+        n, unit = int(m.group(1)), m.group(2).lower()
+        delta = {"min": timedelta(minutes=n), "hou": timedelta(hours=n), "hor": timedelta(hours=n),
+                 "day": timedelta(days=n), "dia": timedelta(days=n), "wee": timedelta(weeks=n),
+                 "sem": timedelta(weeks=n)}.get(unit[:3], timedelta(days=30 * n))
+        return (now - delta).astimezone(config.TZ).isoformat(timespec="seconds")
+    if re.search(r"yesterday|ontem", text, re.I):
+        return (now - timedelta(days=1)).astimezone(config.TZ).isoformat(timespec="seconds")
+    if m := re.search(r"([A-Za-zçÇ]{3})[a-zç]*\.?\s+(\d{1,2}),?\s+(\d{4})|(\d{1,2})\s+(?:de\s+)?([A-Za-zçÇ]{3})[a-zç]*\.?\s+(?:de\s+)?(\d{4})", text):
+        mon, day, year = (m.group(1), m.group(2), m.group(3)) if m.group(1) else (m.group(5), m.group(4), m.group(6))
+        if (month := _MONTHS.get(mon.lower())):
+            try:
+                return datetime(int(year), month, int(day), 12, tzinfo=config.TZ).isoformat(timespec="seconds")
+            except ValueError:
+                return None
+    return None
+
+
+def search_firecrawl(query: str, api_key: str, cfg: dict) -> tuple[list[dict], int]:
+    """Busca de notícias no Firecrawl restrita ao Brasil. Retorna (resultados, créditos usados)."""
+    fc = cfg["firecrawl"]
+    payload = {
+        "query": query,
+        "limit": int(fc.get("resultados_por_busca", 10)),
+        "sources": ["news"],
+        "country": "BR",
+        "location": "Brazil",
+        "tbs": TBS_BY_PERIOD.get(fc.get("periodo", "w"), "qdr:w"),
+        "timeout": 60000,
+    }
+    resp = requests.post(FIRECRAWL_URL, json=payload, timeout=90,
+                         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"})
+    if resp.status_code >= 400:
+        raise RuntimeError(f"Firecrawl HTTP {resp.status_code}: {resp.text[:300]}")
+    data = resp.json()
+    if not data.get("success", True):
+        raise RuntimeError(f"Firecrawl: {data.get('error') or data.get('warning') or 'falha na busca'}")
+    results = []
+    for r in (data.get("data") or {}).get("news") or []:
+        url = r.get("url")
+        if not url:
+            continue
+        results.append({
+            "title": _clean(r.get("title") or "", 300) or url,
+            "url": url,
+            "source": source_from_url(url),
+            "published_at": parse_news_date(r.get("date")),
+            "summary": _clean(re.sub(r"\*\*", "", r.get("snippet") or r.get("description") or "")),
+            "image": r.get("imageUrl"),
+        })
+    return results, int(data.get("creditsUsed") or 0)
+
+
 # ------------------------------------------------------------ DuckDuckGo
 def _ddgs_class():
     try:
