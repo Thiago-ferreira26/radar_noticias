@@ -16,6 +16,7 @@ from radar.classify import CATEGORIES
 
 st.set_page_config(page_title="Radar Cordeiro", page_icon="📡", layout="wide")
 st.markdown(ui.CSS, unsafe_allow_html=True)
+ui.disable_browser_translation()  # evita o erro "removeChild" causado pelo tradutor automático do navegador
 try:
     db.init_db()
 except db.DatabaseConnectionError as exc:  # Supabase configurado, mas inacessível: mostra o motivo e para

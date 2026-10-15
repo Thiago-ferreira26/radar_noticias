@@ -225,6 +225,31 @@ div.stButton > button[kind="primary"]:disabled{background:var(--surface-alt); co
 """
 
 
+# Tradutor automático do navegador (Google/Edge) troca os textos da página e quebra o React do Streamlit
+# ("Failed to execute 'removeChild' on 'Node'"). O Streamlit declara a página como inglês (lang="en"),
+# o que faz o navegador oferecer/aplicar a tradução. Este script marca a página como português e
+# "não traduzir" (atributos padrão reconhecidos por Chrome, Edge e Google Tradutor).
+NO_TRANSLATE_JS = """
+(function(){
+  try{
+    var d = window.parent.document, h = d.documentElement;
+    h.setAttribute("lang", "pt-BR"); h.setAttribute("translate", "no"); h.classList.add("notranslate");
+    if(d.body){ d.body.setAttribute("translate", "no"); d.body.classList.add("notranslate"); }
+    if(!d.querySelector('meta[name="google"][content="notranslate"]')){
+      var m = d.createElement("meta"); m.name = "google"; m.content = "notranslate"; d.head.appendChild(m);
+    }
+  }catch(e){}
+})();
+"""
+
+
+def disable_browser_translation() -> None:
+    """Aplica NO_TRANSLATE_JS na página do Streamlit (componente invisível, mesmo domínio)."""
+    import streamlit.components.v1 as components
+
+    components.html(f"<script>{NO_TRANSLATE_JS}</script>", height=0)
+
+
 def h(text) -> str:
     # "$" escapado para o Markdown do Streamlit não interpretar "R$ ... R$" como fórmula LaTeX.
     # Quebras de linha viram entidade: uma linha em branco encerraria o bloco HTML no Markdown.

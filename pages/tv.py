@@ -12,6 +12,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from radar import db
+from radar.ui import NO_TRANSLATE_JS
 from radar.tvdeck import build_deck
 
 st.set_page_config(page_title="Radar Cordeiro · TV", page_icon="📺", layout="wide",
@@ -52,5 +53,6 @@ except db.DatabaseConnectionError as exc:
 template = (Path(__file__).resolve().parent.parent / "radar" / "tv.html").read_text(encoding="utf-8")
 page = (template
         .replace("__DATA__", json.dumps(deck, ensure_ascii=False).replace("</", "<\\/"))
-        .replace("__CFG__", json.dumps(cfg)))
+        .replace("__CFG__", json.dumps(cfg))
+        .replace("__NO_TRANSLATE__", NO_TRANSLATE_JS))
 components.html(page, height=1080, scrolling=False)
