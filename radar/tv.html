@@ -193,35 +193,56 @@ __NO_TRANSLATE__
       '<div class="foot"><span>'+esc(d.im)+' · '+esc(d.source)+' · '+esc(d.date)+'</span><span class="sig">'+esc(d.signal)+'</span></div></div>';
   }
 
-  var deck = [{type:"cover"}].concat(DATA.slides.map(function(s){ return {type:"op", doc:s}; }));
+  // Deck: capa + uma notícia por slide, com a capa repetida a cada CFG.coverEvery notícias.
+  var deck = [{type:"cover"}], total = DATA.slides.length;
+  DATA.slides.forEach(function(s, k){
+    if(CFG.coverEvery && k > 0 && k % CFG.coverEvery === 0) deck.push({type:"cover"});
+    deck.push({type:"op", doc:s, pos:k+1});
+  });
   var stage = document.getElementById("stage");
-  stage.innerHTML = deck.map(function(s){
-    return '<section class="slide">'+(s.type==="cover" ? coverHTML(DATA.cover) : opHTML(s.doc))+'</section>';
-  }).join("");
-  document.getElementById("dots").innerHTML = deck.map(function(){ return "<i></i>"; }).join("");
-  if(!DATA.slides.length){
-    stage.insertAdjacentHTML("beforeend", '<div class="empty" style="position:absolute;inset:auto 0 8% 0;height:auto">Nenhuma oportunidade de Alto potencial ou nova na semana.</div>');
+  var SHOW_DOTS = deck.length <= 40;   // com centenas de slides, os pontinhos viram ruído: fica só o contador
+  var dotsEl = document.getElementById("dots");
+  dotsEl.innerHTML = SHOW_DOTS ? deck.map(function(){ return "<i></i>"; }).join("") : "";
+  if(!SHOW_DOTS) dotsEl.style.display = "none";
+  if(!total){
+    stage.insertAdjacentHTML("beforeend", '<div class="empty" style="position:absolute;inset:auto 0 8% 0;height:auto">Nenhuma notícia na base ainda.</div>');
   }
 
-  // Encaixa o texto de cada slide: reduz linhas do resumo e depois do impacto até caber, sem cortar no meio.
-  function fit(){
-    stage.querySelectorAll(".slide").forEach(function(sl){
-      var col = sl.querySelector(".text"); if(!col) return;
-      var sum = col.querySelector(".sum"), imp = col.querySelector(".impact p");
-      var sumL = 4, impL = 5;
-      function apply(){ if(sum) sum.style.webkitLineClamp = sumL; if(imp) imp.style.webkitLineClamp = impL; }
+  // Encaixa o texto do slide: reduz linhas do resumo e depois do impacto até caber, sem cortar no meio.
+  function fit(sl){
+    var col = sl.querySelector(".text"); if(!col) return;
+    var sum = col.querySelector(".sum"), imp = col.querySelector(".impact p");
+    var sumL = 4, impL = 5;
+    function apply(){ if(sum) sum.style.webkitLineClamp = sumL; if(imp) imp.style.webkitLineClamp = impL; }
+    apply();
+    while(col.scrollHeight > col.clientHeight + 1){
+      if(sum && sumL > 2) sumL--;
+      else if(imp && impL > 2) impL--;
+      else if(sum && sumL > 1) sumL--;
+      else break;
       apply();
-      while(col.scrollHeight > col.clientHeight + 1){
-        if(sum && sumL > 2) sumL--;
-        else if(imp && impL > 2) impL--;
-        else if(sum && sumL > 1) sumL--;
-        else break;
-        apply();
-      }
+    }
+  }
+
+  // Slides montados sob demanda: só o atual, o anterior (saindo) e o próximo (pré-carregado) ficam no DOM.
+  var built = {};
+  function el(i){
+    if(built[i]) return built[i];
+    var s = deck[i], sec = document.createElement("section");
+    sec.className = "slide";
+    sec.innerHTML = s.type === "cover" ? coverHTML(DATA.cover) : opHTML(s.doc);
+    stage.appendChild(sec);
+    fit(sec);
+    built[i] = sec;
+    return sec;
+  }
+  function prune(keep){
+    Object.keys(built).forEach(function(k){
+      if(keep.indexOf(+k) < 0){ built[k].remove(); delete built[k]; }
     });
   }
-  fit(); window.addEventListener("resize", fit);
-  if(document.fonts) document.fonts.ready.then(fit);
+  window.addEventListener("resize", function(){ Object.keys(built).forEach(function(k){ fit(built[k]); }); });
+  if(document.fonts) document.fonts.ready.then(function(){ Object.keys(built).forEach(function(k){ fit(built[k]); }); });
 
   function reloadPage(){
     // Recarrega o painel Streamlit (dados novos da coleta). Se o iframe não puder, recarrega só o carrossel.
@@ -230,12 +251,14 @@ __NO_TRANSLATE__
   function show(i){
     var n = deck.length;
     i = ((i % n) + n) % n;
-    if(i === 0 && S.idx !== 0 && (Date.now() - startedAt) > CFG.refreshMin*60000){ reloadPage(); return; }
-    var slides = stage.querySelectorAll(".slide");
-    slides.forEach(function(s,k){ s.classList.toggle("on", k===i); s.classList.toggle("off", k!==i && s.classList.contains("on")); });
-    setTimeout(function(){ slides.forEach(function(s,k){ if(k!==i) s.classList.remove("off"); }); }, 750);
-    document.querySelectorAll("#dots i").forEach(function(d,k){ d.classList.toggle("on", k===i); });
-    document.getElementById("counter").textContent = i===0 ? "Capa" : (i+" / "+(n-1));
+    if(deck[i].type === "cover" && i !== S.idx && (Date.now() - startedAt) > CFG.refreshMin*60000){ reloadPage(); return; }
+    var prev = S.idx, cur = el(i), next = (i + 1) % n;
+    if(built[prev] && prev !== i){ built[prev].classList.remove("on"); built[prev].classList.add("off"); }
+    requestAnimationFrame(function(){ cur.classList.remove("off"); cur.classList.add("on"); });
+    el(next);                                  // pré-monta o próximo (imagens começam a carregar)
+    setTimeout(function(){ prune([S.idx, (S.idx + 1) % n]); }, 800);
+    if(SHOW_DOTS) document.querySelectorAll("#dots i").forEach(function(d,k){ d.classList.toggle("on", k===i); });
+    document.getElementById("counter").textContent = deck[i].type === "cover" ? "Capa" : (deck[i].pos + " / " + total);
     S.idx = i;
     S.dur = deck[i].type === "cover" ? CFG.coverMs : CFG.opMs;
     restart();

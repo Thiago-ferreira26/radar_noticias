@@ -1,7 +1,7 @@
 """Modo TV do Radar Cordeiro — carrossel em tela cheia para a TV (rota /tv).
 
     http://<servidor>:8501/tv
-Parâmetros opcionais na URL: ?segundos=18&capa=12&max=24&recarregar=10
+Parâmetros opcionais na URL: ?segundos=18&capa=12&capa_a_cada=30&max=0&recarregar=10 (max=0: todas)
 """
 from __future__ import annotations
 
@@ -43,9 +43,10 @@ cfg = {
     "opMs": _int("segundos", 18, 5, 120) * 1000,
     "coverMs": _int("capa", 12, 5, 120) * 1000,
     "refreshMin": _int("recarregar", 10, 1, 240),  # recarrega os dados ao voltar para a capa após N minutos
+    "coverEvery": _int("capa_a_cada", 30, 0, 1000),  # repete a capa a cada N notícias (0 = só no início)
 }
 try:
-    deck = build_deck(max_ops=_int("max", 24, 1, 60))
+    deck = build_deck(max_ops=_int("max", 0, 0, 5000) or None)  # 0 = todas as notícias
 except db.DatabaseConnectionError as exc:
     st.error("**Banco de dados indisponível**\n\n" + str(exc).replace("\n", "  \n"))
     st.stop()

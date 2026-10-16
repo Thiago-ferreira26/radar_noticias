@@ -148,13 +148,25 @@ Para importar ou atualizar as fichas, use a aba Configuração ou a linha de com
 Abra http://localhost:8501/tv no navegador da TV, ou use o link "Abrir Modo TV" no painel. É um
 carrossel 16:9 em tela cheia, pensado para a TV de 43" em Full HD:
 
-- uma capa com indicadores;
-- até 24 oportunidades (Alto ou Muito Alto, ou novas na semana), com até 2 imagens, impacto e
-  entrada da Cordeiro.
+- **Conteúdo:** a capa com indicadores e **todas as notícias da base**, cada uma com até 2 imagens,
+  impacto e entrada da Cordeiro. A ordem é: novas da semana primeiro, depois por potencial
+  (Muito Alto → Baixo), depois a mais recente.
+- **Capa:** reaparece a cada 30 notícias, e os dados são recarregados nessas passagens (a cada 10
+  minutos ou mais).
+- **Leveza:** só o slide atual e o próximo ficam montados, então o carrossel continua leve com
+  centenas de notícias. O contador mostra a posição, por exemplo `57 / 386`.
 
-Os dados são recarregados ao voltar para a capa, a cada 10 minutos. Controles: ← → navegam,
-espaço pausa e F alterna a tela cheia. O tempo é configurável pela URL:
-`/tv?segundos=18&capa=12&max=24&recarregar=10`.
+Controles: ← → navegam, espaço pausa e F alterna a tela cheia. Parâmetros pela URL:
+
+| Parâmetro | Padrão | Uso |
+|---|---|---|
+| `segundos` | 18 | tempo de cada notícia |
+| `capa` | 12 | tempo da capa |
+| `capa_a_cada` | 30 | repete a capa a cada N notícias (0 = só no início) |
+| `max` | 0 | limita o número de notícias (0 = todas) |
+| `recarregar` | 10 | minutos mínimos entre recargas dos dados |
+
+Exemplo: `/tv?segundos=10&max=100` mostra as 100 primeiras, a 10 s cada.
 
 Para deixar a TV fixa no carrossel, abra o navegador em modo quiosque, por exemplo:
 `chrome --kiosk http://<ip-do-computador>:8501/tv`. Para a TV acessar o painel pela rede, o

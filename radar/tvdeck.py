@@ -1,4 +1,4 @@
-"""Dados do Modo TV: capa com indicadores + slides das oportunidades (mesma seleção da newsletter)."""
+"""Dados do Modo TV: capa com indicadores + um slide por notícia da base."""
 from __future__ import annotations
 
 from collections import Counter
@@ -18,7 +18,8 @@ def _trim(text: str | None, limit: int) -> str:
     return text if len(text) <= limit else text[:limit].rsplit(" ", 1)[0] + "…"
 
 
-def build_deck(max_ops: int = 24) -> dict:
+def build_deck(max_ops: int | None = None) -> dict:
+    """Capa + todas as notícias da base (ou as `max_ops` primeiras), na ordem de prioridade."""
     db.init_db()
     with db.connect() as conn:
         rows = [dict(r) for r in conn.execute("SELECT * FROM news").fetchall()]
@@ -40,11 +41,12 @@ def build_deck(max_ops: int = 24) -> dict:
         "by_uf": [[UF_LABEL.get(u, u), n, "#3f8f8a"] for u, n in ufs.most_common(4)],
     }
 
-    # Oportunidades: Alto/Muito Alto ou novas (exceto Baixo); novas primeiro, depois potencial e data.
-    picked = [r for r in rows if r["potential"] in ("Muito Alto", "Alto") or (r["is_new"] and r["potential"] != "Baixo")]
+    # Todas as notícias: novas da semana primeiro, depois por potencial (Muito Alto → Baixo) e data.
+    picked = list(rows)
     picked.sort(key=lambda r: r.get("published_at") or r["collected_at"], reverse=True)
     picked.sort(key=lambda r: (not r["is_new"], POT_RANK.get(r["potential"], 9)))
-    picked = picked[:max_ops]
+    if max_ops:
+        picked = picked[:max_ops]
 
     researched = dossier.get_dossiers()
     imgs = images.images_by_news()
