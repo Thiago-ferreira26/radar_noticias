@@ -152,7 +152,8 @@ carrossel 16:9 em tela cheia, pensado para a TV de 43" em Full HD:
   impacto e entrada da Cordeiro. A ordem é: novas da semana primeiro, depois por potencial
   (Muito Alto → Baixo), depois a mais recente.
 - **Capa:** reaparece a cada 30 notícias, e os dados são recarregados nessas passagens (a cada 10
-  minutos ou mais).
+  minutos ou mais). A recarga **continua da notícia seguinte à última exibida**; não volta para o
+  início. Assim a TV percorre a base inteira, e a lista é refeita só ao terminar a volta.
 - **Leveza:** só o slide atual e o próximo ficam montados, então o carrossel continua leve com
   centenas de notícias. O contador mostra a posição, por exemplo `57 / 386`.
 

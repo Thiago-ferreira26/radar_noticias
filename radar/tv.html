@@ -244,7 +244,33 @@ __NO_TRANSLATE__
   window.addEventListener("resize", function(){ Object.keys(built).forEach(function(k){ fit(built[k]); }); });
   if(document.fonts) document.fonts.ready.then(function(){ Object.keys(built).forEach(function(k){ fit(built[k]); }); });
 
+  // Posição salva entre recargas: a recarga traz notícias novas, mas o carrossel CONTINUA de onde parou
+  // (antes voltava para a 1ª notícia a cada ~10 min e nunca passava de ~60).
+  var POS_KEY = "radar_tv_pos";
+  function store(){
+    try{ return window.parent.sessionStorage; }catch(e){}
+    try{ return window.sessionStorage; }catch(e){}
+    return null;
+  }
+  function savePos(){
+    var s = store(); if(!s || !S.lastIm) return;
+    try{ s.setItem(POS_KEY, JSON.stringify({im: S.lastIm, pos: S.lastPos, t: Date.now()})); }catch(e){}
+  }
+  function resumeIndex(){
+    var s = store(); if(!s) return 0;
+    var saved = null;
+    try{ saved = JSON.parse(s.getItem(POS_KEY) || "null"); s.removeItem(POS_KEY); }catch(e){}
+    if(!saved || Date.now() - saved.t > 6*3600*1000) return 0;   // posição de mais de 6 h atrás: recomeça
+    for(var k = 0; k < deck.length; k++){                          // acha a última notícia exibida no deck novo
+      if(deck[k].type === "op" && deck[k].doc.im === saved.im) return (k + 1) % deck.length;
+    }
+    for(var j = 0; j < deck.length; j++){                          // ela saiu da base: usa a posição numérica
+      if(deck[j].type === "op" && deck[j].pos > saved.pos) return j;
+    }
+    return 0;                                                       // passou do fim: nova volta
+  }
   function reloadPage(){
+    savePos();
     // Recarrega o painel Streamlit (dados novos da coleta). Se o iframe não puder, recarrega só o carrossel.
     try{ window.top.location.reload(); }catch(e){ location.reload(); }
   }
@@ -260,6 +286,7 @@ __NO_TRANSLATE__
     if(SHOW_DOTS) document.querySelectorAll("#dots i").forEach(function(d,k){ d.classList.toggle("on", k===i); });
     document.getElementById("counter").textContent = deck[i].type === "cover" ? "Capa" : (deck[i].pos + " / " + total);
     S.idx = i;
+    if(deck[i].type === "op"){ S.lastIm = deck[i].doc.im; S.lastPos = deck[i].pos; }
     S.dur = deck[i].type === "cover" ? CFG.coverMs : CFG.opMs;
     restart();
   }
@@ -315,7 +342,8 @@ __NO_TRANSLATE__
   });
   clock(); setInterval(clock, 15000);
   wake();
-  show(0);
+  S.idx = -1;            // nenhum slide anterior
+  show(resumeIndex());
 })();
 </script>
 </body>
