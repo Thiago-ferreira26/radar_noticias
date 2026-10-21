@@ -12,7 +12,7 @@ import streamlit as st
 
 from radar import auth, config, crm, db, dossier, export, images, ui
 from radar.collector import run_collection
-from radar.classify import CATEGORIES
+from radar.classify import CATEGORIES, has_relation
 
 st.set_page_config(page_title="Radar Cordeiro", page_icon="📡", layout="wide")
 st.markdown(ui.CSS, unsafe_allow_html=True)
@@ -39,6 +39,7 @@ def load_news() -> pd.DataFrame:
     df["pot_rank"] = df["potential"].map(POT_RANK).fillna(9)
     df["sort_date"] = df["published_at"].fillna(df["collected_at"])
     df["uf_list"] = df["ufs"].fillna("").str.split(",")
+    df["relevante"] = df["demand"].map(has_relation).astype(bool)
     df["lead_im"] = [ui.im_code(r) for r in df.to_dict("records")]
     # Ficha do executivo: pesquisada (importada da newsletter) ou preliminar gerada pelo roteiro padrão.
     researched = dossier.get_dossiers()
@@ -227,7 +228,10 @@ def newsletter_filters(df: pd.DataFrame, key: str) -> pd.DataFrame:
 
 
 # ------------------------------------------------------------------ cabeçalho
-news = load_news()
+all_news = load_news()
+# Notícias sem relação com a Cordeiro (demanda "Não") ficam fora das telas; o Histórico do admin pode mostrá-las.
+news = all_news[all_news["relevante"]]
+n_sem_relacao = int((~all_news["relevante"]).sum()) if len(all_news) else 0
 runs = load_runs()
 today_key = config.today().isoformat()
 cfg = config.load_config()
@@ -311,7 +315,10 @@ with tab_hist:
         origens = c7.multiselect("Ficha do executivo", ["newsletter", "automatica"],
                                  format_func={"newsletter": "Pesquisada", "automatica": "Preliminar"}.get)
 
-        base = news
+        mostrar_irrelevantes = st.toggle(
+            f"Mostrar notícias sem relação com a Cordeiro ({n_sem_relacao})", value=False, key="hist_irrelevantes",
+            help="Demanda de guindaste/área = Não. Ficam fora da Visão do dia e do Modo TV.")
+        base = all_news if mostrar_irrelevantes else news
         if isinstance(period, (tuple, list)) and len(period) == 2:
             start, end = (d.isoformat() for d in period)
             dates = base[col].fillna("").str[:10]

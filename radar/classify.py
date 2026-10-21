@@ -251,6 +251,15 @@ def classify(title: str, summary: str, theme: str | None = None, cfg: dict | Non
     }
 
 
+NO_RELATION_DEMAND = "Não"
+
+
+def has_relation(demand) -> bool:
+    """False para notícias sem relação com a Cordeiro (demanda de guindaste/área = "Não"): ficam no banco,
+    mas não aparecem na Visão do dia nem no Modo TV."""
+    return (demand or "") != NO_RELATION_DEMAND
+
+
 def is_excluded(title: str, summary: str, cfg: dict) -> bool:
     text_n = norm(f"{title} {summary}")
     return any(norm(w).strip() in text_n for w in cfg.get("excluir_se_contiver", []) or [] if w)

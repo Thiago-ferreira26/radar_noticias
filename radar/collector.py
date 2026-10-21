@@ -64,7 +64,8 @@ def _store_results(results, term, engine, run_id, cfg, image_jobs: list) -> int:
         }
         if db.insert_news(item):
             new += 1
-            image_jobs.append((db.news_id(item["url"]), item["url"], [r.get("image")]))
+            if classify.has_relation(item.get("demand")):  # sem relação com a Cordeiro: não precisa de imagem
+                image_jobs.append((db.news_id(item["url"]), item["url"], [r.get("image")]))
     return new
 
 

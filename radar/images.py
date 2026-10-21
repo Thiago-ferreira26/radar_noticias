@@ -292,8 +292,9 @@ def images_by_news() -> dict[int, list[str]]:
 
 def backfill(limit: int | None = None) -> int:
     db.init_db()
+    # Só notícias com relação com a Cordeiro (demanda diferente de "Não"): as demais não aparecem nas telas.
     sql = ("SELECT n.id, n.url FROM news n WHERE (SELECT COUNT(*) FROM news_images i WHERE i.news_id=n.id) < ? "
-           "ORDER BY n.collected_at DESC")
+           "AND COALESCE(n.demand, '') <> 'Não' ORDER BY n.collected_at DESC")
     with db.connect() as conn:
         rows = conn.execute(sql + (f" LIMIT {int(limit)}" if limit else ""), (MAX_IMAGES,)).fetchall()
     return store_many([(r["id"], r["url"], []) for r in rows])

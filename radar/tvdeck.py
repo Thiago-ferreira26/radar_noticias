@@ -5,6 +5,7 @@ from collections import Counter
 from datetime import timedelta
 
 from . import config, db, dossier, images
+from .classify import has_relation
 from .ui import POTENTIALS, UF_LABEL, VERT_COLORS, fmt_date
 from .ui import im_code as ui_im_code
 
@@ -23,6 +24,7 @@ def build_deck(max_ops: int | None = None) -> dict:
     db.init_db()
     with db.connect() as conn:
         rows = [dict(r) for r in conn.execute("SELECT * FROM news").fetchall()]
+        rows = [r for r in rows if has_relation(r.get("demand"))]  # sem relação com a Cordeiro: fora da TV
         last = conn.execute("SELECT finished_at FROM runs WHERE finished_at IS NOT NULL ORDER BY id DESC LIMIT 1").fetchone()
     new_since = (config.today() - timedelta(days=NEW_DAYS)).isoformat()
     for r in rows:

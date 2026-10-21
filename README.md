@@ -78,6 +78,17 @@ fica bloqueado por 5 minutos naquela sessão.
 Usuário e senha ficam em `ADMIN_USER` e `ADMIN_PASSWORD`, no `.env` ou nos Secrets do Streamlit
 Cloud, e nunca no código. Sem essas variáveis, ninguém consegue entrar como administrador.
 
+### Notícias sem relação com a Cordeiro
+
+Notícias com **demanda de guindaste/área = "Não"** não aparecem na Visão do dia, no Modo TV, nos
+indicadores do topo nem nas exportações. Na maioria, a classificação automática não achou relação
+com içamento ou carga pesada ("Sem relação prática identificada…"); algumas são fichas em que o
+analista marcou "Não".
+
+Elas continuam no banco, para não voltarem como "novas" na próxima coleta e para a regra poder ser
+revista. O administrador as vê no **Histórico**, ligando **"Mostrar notícias sem relação com a
+Cordeiro"**. Elas também não recebem imagens.
+
 ### Barra de filtros
 
 As abas Visão do dia e Histórico usam a barra de filtros da newsletter: busca, chips de
