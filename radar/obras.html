@@ -166,7 +166,7 @@ select.fsel{border:1px solid var(--border);background:var(--surface-2);border-ra
 .pill{font-size:12px;border-radius:999px;padding:3px 10px;background:var(--surface-2);color:var(--text-2);border:1px solid var(--border)}
 .pill.build{background:var(--good-soft);color:var(--good);border-color:transparent;font-weight:600}
 .pill.wait{background:var(--surface-3);color:var(--text-2);border-color:transparent;font-weight:600}
-/* Destaque comercial: etapa Alvará / Licenciamento */
+/* Etapa atual em destaque: é a ela que a prev. término fase se refere */
 .pill.hot{background:var(--amber);color:var(--surface);border-color:transparent;font-weight:700}
 .pill.hot::before{content:"★ "}
 .dates{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;background:var(--surface-2);border-radius:var(--radius-md);padding:10px 12px}
@@ -310,8 +310,6 @@ const SETORES = [
   {k:'Infraestrutura', c:'--s-inf', s:'--s-inf-soft'}
 ];
 const SC = Object.fromEntries(SETORES.map(s=>[s.k,s]));
-// Etapa em destaque nas fichas (prioridade comercial)
-const HOT = new Set(['Alvará / Licenciamento']);
 const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 const UFN = Object.fromEntries(Object.entries(DB.states).map(([k,v])=>[k,v.name]));
 const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -549,7 +547,7 @@ function card(o){
       <div class="cloc">${esc(o.cidade)} / ${o.uf} · ${esc(UFN[o.uf])}${o.geoAprox?' <span class="mut">(município não localizado no mapa)</span>':''}</div>
       <div class="masked" title="Nome da obra como aparece (mascarado) na fonte">${esc(o.nome)}</div>
     </div>
-    <div class="pills"><span class="pill ${o.status==='Obra em Construção'?'build':'wait'}">${o.status==='Obra em Construção'?'Em construção':'Não iniciada'}</span><span class="pill${HOT.has(o.faseCurta)?' hot':''}">${esc(o.faseCurta)}</span><span class="pill">${esc(o.espec)}</span></div>
+    <div class="pills"><span class="pill wait">${o.status==='Obra em Construção'?'Em construção':'Não iniciada'}</span><span class="pill hot" title="Etapa atual: a prev. término fase se refere a ela">${esc(o.faseCurta)}</span><span class="pill">${esc(o.espec)}</span></div>
     <div class="dates">
       <div class="key"><span>Prev. término fase</span><b>${esc(o.pfase)}</b><br>${dueTag(o)}</div>
       <div class="key"><span>Prev. entrega obra</span><b>${esc(o.pent==='-'?'não informada':o.pent)}</b></div>
