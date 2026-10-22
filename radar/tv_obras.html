@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="pt-BR" translate="no" class="notranslate">
+<head>
+<meta charset="utf-8">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  /* Modo TV — carrossel 16:9 (TV 43" Full HD). Medidas em --u para escalar com a tela. */
+  :root{ --u: min(1vw, 1.7778vh); --amber:#c9761a; --amber-l:#eba14a; --teal-deep:#0d2b2a; }
+  *{box-sizing:border-box;}
+  html,body{margin:0; height:100%; background:#0b1f1e; color:#eef4f2; overflow:hidden;
+    font-family:"IBM Plex Sans", system-ui, sans-serif;}
+  #tv{position:fixed; inset:0; display:flex; flex-direction:column;}
+  #tv.idle{cursor:none;}
+  .bar{display:flex; align-items:center; justify-content:space-between; gap:calc(var(--u)*2);
+    padding:calc(var(--u)*1.4) calc(var(--u)*3); background:var(--teal-deep);
+    border-bottom:calc(var(--u)*0.25) solid var(--amber); flex:none;}
+  .brand{display:flex; align-items:center; gap:calc(var(--u)*1.2);}
+  .mark{width:calc(var(--u)*3.2); height:calc(var(--u)*3.2); border-radius:50%; flex:none;
+    border:1px solid rgba(238,244,242,.35);
+    background:radial-gradient(circle at 50% 50%, transparent 0 8%, rgba(238,244,242,.18) 8% 10%, transparent 10% 24%,
+      rgba(238,244,242,.18) 24% 26%, transparent 26% 40%, rgba(238,244,242,.18) 40% 42%, transparent 42%),
+      conic-gradient(from 0deg, var(--amber) 0deg, transparent 55deg 360deg), var(--teal-deep);
+    animation:sweep 4s linear infinite;}
+  @keyframes sweep{to{transform:rotate(360deg);}}
+  @media (prefers-reduced-motion: reduce){.mark{animation:none;}}
+  .brand b{font-family:"IBM Plex Sans Condensed"; font-weight:700; text-transform:uppercase;
+    font-size:calc(var(--u)*2); letter-spacing:.02em;}
+  .brand span{display:block; font-size:calc(var(--u)*1); color:#a9bfba;}
+  .right{display:flex; align-items:center; gap:calc(var(--u)*2.2);}
+  .clock{font-family:"IBM Plex Mono"; font-size:calc(var(--u)*2); font-weight:600; font-variant-numeric:tabular-nums;}
+  .counter{font-family:"IBM Plex Mono"; font-size:calc(var(--u)*1.2); color:#a9bfba; font-variant-numeric:tabular-nums;}
+  .ctrl{display:flex; gap:calc(var(--u)*0.6); transition:opacity .4s;}
+  .ctrl button{background:rgba(238,244,242,.08); border:1px solid rgba(238,244,242,.22); color:#eef4f2;
+    width:calc(var(--u)*3.2); height:calc(var(--u)*3.2); border-radius:50%; font-size:calc(var(--u)*1.3);
+    cursor:pointer; display:grid; place-items:center; padding:0;}
+  .ctrl button:hover{background:rgba(238,244,242,.2);}
+  #tv.idle .ctrl{opacity:0;}
+  .progress{height:calc(var(--u)*0.45); background:rgba(238,244,242,.1); flex:none;}
+  .progress i{display:block; height:100%; width:0; background:var(--amber);}
+  .stage{position:relative; flex:1; min-height:0;}
+  .slide{position:absolute; inset:0; padding:calc(var(--u)*2.6) calc(var(--u)*3.4) calc(var(--u)*2);
+    display:flex; flex-direction:column; gap:calc(var(--u)*1.6); opacity:0; transform:translateX(3%);
+    transition:opacity .7s ease, transform .7s ease; pointer-events:none;}
+  .slide.on{opacity:1; transform:none; pointer-events:auto;}
+  .slide.off{opacity:0; transform:translateX(-3%);}
+  @media (prefers-reduced-motion: reduce){.slide{transition:opacity .3s; transform:none !important;}}
+  .dots{display:flex; gap:calc(var(--u)*0.45); justify-content:center; padding:calc(var(--u)*0.9) 0; flex:none; flex-wrap:wrap;}
+  .dots i{width:calc(var(--u)*0.7); height:calc(var(--u)*0.7); border-radius:50%; background:rgba(238,244,242,.2);}
+  .dots i.on{background:var(--amber-l); transform:scale(1.3);}
+  .hint{position:absolute; left:50%; bottom:calc(var(--u)*3); transform:translateX(-50%); background:rgba(0,0,0,.65);
+    color:#fff; padding:calc(var(--u)*0.8) calc(var(--u)*1.6); border-radius:999px; font-size:calc(var(--u)*1.1);
+    transition:opacity .5s; pointer-events:none; white-space:nowrap;}
+
+  /* capa */
+  .eyebrow{font-family:"IBM Plex Sans Condensed"; font-weight:700; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--amber-l); font-size:calc(var(--u)*1.35);}
+  .cover h2{margin:0; font-family:"IBM Plex Sans Condensed"; font-weight:700; text-transform:uppercase;
+    font-size:calc(var(--u)*4.4); line-height:1.02;}
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:calc(var(--u)*1.4);}
+  .kpi{background:rgba(238,244,242,.05); border:1px solid rgba(238,244,242,.14); border-radius:calc(var(--u)*1);
+    padding:calc(var(--u)*1.6) calc(var(--u)*1.8);}
+  .kpi b{display:block; font-family:"IBM Plex Mono"; font-weight:600; font-size:calc(var(--u)*4.6); line-height:1;
+    font-variant-numeric:tabular-nums;}
+  .kpi b.sm{font-size:calc(var(--u)*3.4); padding:calc(var(--u)*0.6) 0;}
+  .kpi span{display:block; margin-top:calc(var(--u)*0.8); font-size:calc(var(--u)*1.2); text-transform:uppercase;
+    letter-spacing:.05em; color:#a9bfba;}
+  .kpi.hl b{color:var(--amber-l);}
+  .split{display:grid; grid-template-columns:1fr 1fr; column-gap:calc(var(--u)*3); row-gap:calc(var(--u)*1.2);
+    align-content:start; flex:1; min-height:0;}
+  .ufs{display:grid; grid-template-columns:1fr 1fr; column-gap:calc(var(--u)*3);}
+  .panel h3{margin:0 0 calc(var(--u)*1.1); font-family:"IBM Plex Sans Condensed"; text-transform:uppercase;
+    letter-spacing:.05em; font-size:calc(var(--u)*1.35); color:#a9bfba;}
+  .barrow{display:grid; grid-template-columns:calc(var(--u)*15) 1fr calc(var(--u)*3.5); align-items:center;
+    gap:calc(var(--u)*1); margin-bottom:calc(var(--u)*0.9);}
+  .barrow .lbl{font-size:calc(var(--u)*1.4); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .barrow .trk{height:calc(var(--u)*1.6); background:rgba(238,244,242,.07); border-radius:calc(var(--u)*0.4); overflow:hidden;}
+  .barrow .trk i{display:block; height:100%; border-radius:calc(var(--u)*0.4);}
+  .barrow .val{font-family:"IBM Plex Mono"; font-size:calc(var(--u)*1.5); font-weight:600; text-align:right;}
+
+  /* oportunidade */
+  .top{display:flex; align-items:center; gap:calc(var(--u)*0.8); flex-wrap:wrap;}
+  .tag{font-size:calc(var(--u)*1.15); padding:calc(var(--u)*0.35) calc(var(--u)*1); border-radius:999px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; background:rgba(238,244,242,.1); color:#eef4f2;}
+  .tag.vert{background:transparent; border:2px solid currentColor; filter:brightness(1.7);}
+  .tag.uf{font-family:"IBM Plex Mono"; background:#173330; color:#63b8b0;}
+  .tag.new{background:var(--amber-l); color:var(--teal-deep);}
+  .tag.p-muito-alto{background:#a34a12; color:#fff;} .tag.p-alto{background:#c9761a; color:#fff;}
+  .tag.p-medio{background:#a1441f; color:#fff;} .tag.p-baixo{background:#7c8b86; color:#fff;}
+  .op h2, .ob h2{margin:0; font-size:calc(var(--u)*3); line-height:1.15; font-weight:700;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .body{display:grid; grid-template-columns:1.05fr 1fr; gap:calc(var(--u)*2.4); flex:1; min-height:0;}
+  .body.with-img{grid-template-columns:1fr 1.15fr;}
+  .imgs{display:grid; gap:calc(var(--u)*1); min-height:0;}
+  .imgs{grid-template-rows:minmax(0,1fr);}
+  .imgs.two{grid-template-rows:minmax(0,1.6fr) minmax(0,1fr);}
+  .imgs img{width:100%; height:100%; min-height:0; object-fit:cover; border-radius:calc(var(--u)*0.8);
+    background:#132f2d; display:block;}
+  .text{display:flex; flex-direction:column; gap:calc(var(--u)*1.2); min-height:0; overflow:hidden;}
+  .text > *{flex:none;}
+  .entry .t{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .sum{margin:0; font-size:calc(var(--u)*1.5); line-height:1.5; color:#c6d6d1;
+    display:-webkit-box; -webkit-line-clamp:7; -webkit-box-orient:vertical; overflow:hidden;}
+  .body.with-img .sum{-webkit-line-clamp:3;}
+  .impact{background:#132f2d; border-left:calc(var(--u)*0.5) solid var(--amber); border-radius:calc(var(--u)*0.8);
+    padding:calc(var(--u)*1.4) calc(var(--u)*1.8); display:flex; flex-direction:column; gap:calc(var(--u)*0.8); min-height:0;}
+  .impact .head{display:flex; align-items:center; gap:calc(var(--u)*1); flex-wrap:wrap;}
+  .impact .lab{font-family:"IBM Plex Sans Condensed"; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--amber-l); font-size:calc(var(--u)*1.3);}
+  .impact .dem{align-self:flex-start; font-size:calc(var(--u)*1.2); font-weight:600; background:rgba(238,244,242,.1);
+    padding:calc(var(--u)*0.3) calc(var(--u)*1); border-radius:999px;}
+  .impact p{margin:0; font-size:calc(var(--u)*1.4); line-height:1.5; color:#e1ebe8;
+    display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden;}
+  .body.with-img .impact p{-webkit-line-clamp:3;}
+  .entry{background:#173330; border-radius:calc(var(--u)*0.8); padding:calc(var(--u)*1.1) calc(var(--u)*1.6);
+    font-size:calc(var(--u)*1.3); line-height:1.45; color:#d6e4e0;}
+  .entry b{display:block; color:#63b8b0; font-size:calc(var(--u)*1.4); font-family:"IBM Plex Sans Condensed";
+    text-transform:uppercase; letter-spacing:.04em;}
+  .foot{display:flex; justify-content:space-between; align-items:center; gap:calc(var(--u)*1);
+    padding-top:calc(var(--u)*1); border-top:1px dashed rgba(238,244,242,.18);
+    font-family:"IBM Plex Mono"; font-size:calc(var(--u)*1.2); color:#a9bfba;}
+  .foot .sig{font-family:"IBM Plex Sans"; font-style:italic;}
+  .empty{display:grid; place-items:center; height:100%; font-size:calc(var(--u)*2); color:#a9bfba;}
+
+  /* Mapa de Obras: mapa do Brasil (capa) e do estado da obra (slide) */
+  .map{width:100%; height:100%; display:block;}
+  .map .st{fill:#1c3533; stroke:#0b1f1e; stroke-width:1; vector-effect:non-scaling-stroke;}
+  .map .st.hl{fill:#24504c;}
+  .map .st.has{fill:#204341;}
+  .map .pin{stroke:#0b1f1e; stroke-width:1.2; vector-effect:non-scaling-stroke;}
+  .map .pin.me{stroke:#fff; stroke-width:3;}
+  .map .pin.ap{stroke-dasharray:3 2;}
+  .map .ring{fill:none; stroke:#fff; stroke-width:2; vector-effect:non-scaling-stroke; opacity:.8;
+    animation:ring 2.2s ease-out infinite; transform-box:fill-box; transform-origin:center;}
+  @keyframes ring{from{transform:scale(1); opacity:.9;} to{transform:scale(3.2); opacity:0;}}
+  @media (prefers-reduced-motion: reduce){.map .ring{animation:none;}}
+  .map .lbl{font-family:"IBM Plex Mono"; font-weight:600; fill:#a9bfba; text-anchor:middle; pointer-events:none;}
+  .cover-grid{display:grid; grid-template-columns:1.1fr 1fr; gap:calc(var(--u)*3); flex:1; min-height:0;}
+  .cover-grid .mapbox{min-height:0; background:rgba(238,244,242,.03); border:1px solid rgba(238,244,242,.1);
+    border-radius:calc(var(--u)*1); padding:calc(var(--u)*0.8);}
+  .cover-grid .panels{display:flex; flex-direction:column; gap:calc(var(--u)*1.4); min-height:0;}
+  .cover-grid .ufs .barrow{grid-template-columns:calc(var(--u)*8) 1fr calc(var(--u)*2.6);}
+  .cover-grid .barrow{margin-bottom:calc(var(--u)*0.6);}
+  .ob .body{grid-template-columns:1fr 1.25fr;}
+  .ob .mapbox{min-height:0; position:relative; background:rgba(238,244,242,.03); border:1px solid rgba(238,244,242,.1);
+    border-radius:calc(var(--u)*1); padding:calc(var(--u)*0.6); display:flex; flex-direction:column;}
+  .ob .mapbox svg{flex:1; min-height:0;}
+  .ob .mapbox .where{font-size:calc(var(--u)*1.35); font-weight:600; padding:calc(var(--u)*0.4) calc(var(--u)*0.8) 0;}
+  .ob .mapbox .where small{display:block; font-weight:400; color:#a9bfba; font-size:calc(var(--u)*1.1);}
+  .tag.setor{background:var(--sc); color:#fff;}
+  .tag.build{background:#2e7d5b; color:#fff;} .tag.wait{background:#24504c; color:#cde3de;}
+  .nome{font-family:"IBM Plex Mono"; font-size:calc(var(--u)*1.15); color:#82999a; margin-top:calc(var(--u)*-0.8);}
+  .dates{display:grid; grid-template-columns:repeat(4,1fr); gap:calc(var(--u)*1);}
+  .dates div{background:#132f2d; border-radius:calc(var(--u)*0.8); padding:calc(var(--u)*1) calc(var(--u)*1.2);}
+  .dates span{display:block; font-size:calc(var(--u)*1); text-transform:uppercase; letter-spacing:.05em; color:#a9bfba;}
+  .dates b.val{font-size:calc(var(--u)*1.4);}
+  .dates b{display:block; font-family:"IBM Plex Mono"; font-size:calc(var(--u)*1.9); font-weight:600; margin-top:calc(var(--u)*0.3);
+    font-variant-numeric:tabular-nums;}
+  .dates .key b{color:var(--amber-l);}
+  .due{display:inline-block; margin-top:calc(var(--u)*0.4); font-size:calc(var(--u)*1.05); font-weight:700; border-radius:calc(var(--u)*0.3);
+    padding:calc(var(--u)*0.1) calc(var(--u)*0.6); background:rgba(238,244,242,.1);}
+  .due.soon{background:var(--amber-l); color:var(--teal-deep);} .due.late{background:#a1441f; color:#fff;}
+  .facts{display:grid; grid-template-columns:auto 1fr; gap:calc(var(--u)*0.4) calc(var(--u)*1.6); margin:0;
+    font-size:calc(var(--u)*1.35);}
+  .facts dt{color:#a9bfba;} .facts dd{margin:0; font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .emp{background:#173330; border-radius:calc(var(--u)*0.8); padding:calc(var(--u)*1.1) calc(var(--u)*1.6); min-height:0; overflow:hidden;}
+  .emp b{display:block; color:#63b8b0; font-size:calc(var(--u)*1.3); font-family:"IBM Plex Sans Condensed";
+    text-transform:uppercase; letter-spacing:.04em; margin-bottom:calc(var(--u)*0.4);}
+  .emp .row{display:flex; justify-content:space-between; gap:calc(var(--u)*1); font-size:calc(var(--u)*1.35); line-height:1.5;}
+  .emp .row span:last-child{color:#a9bfba; font-size:calc(var(--u)*1.15); flex:none;}
+  .emp .row span:first-child{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .emp .more{font-size:calc(var(--u)*1.15); color:#a9bfba; font-style:italic;}
+  .obs{background:#132f2d; border-left:calc(var(--u)*0.5) solid var(--amber); border-radius:calc(var(--u)*0.8);
+    padding:calc(var(--u)*1) calc(var(--u)*1.6); font-size:calc(var(--u)*1.3); line-height:1.45; color:#e1ebe8;
+    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;}
+  .obs b{color:var(--amber-l);}
+</style>
+</head>
+<body>
+<div id="tv">
+  <div class="bar">
+    <div class="brand"><div class="mark" aria-hidden="true"></div>
+      <div><b>Radar Cordeiro · Mapa de Obras</b><span>Inteligência de Mercado · Grupo Cordeiro · fonte: Obras Online</span></div></div>
+    <div class="right">
+      <div class="ctrl">
+        <button id="prev" title="Anterior (←)" aria-label="Anterior">◀</button>
+        <button id="play" title="Pausar/continuar (espaço)" aria-label="Pausar">❚❚</button>
+        <button id="next" title="Próximo (→)" aria-label="Próximo">▶</button>
+        <button id="full" title="Tela cheia (F)" aria-label="Tela cheia">⛶</button>
+      </div>
+      <span class="counter" id="counter">Capa</span>
+      <span class="clock" id="clock">--:--</span>
+    </div>
+  </div>
+  <div class="progress"><i id="prog"></i></div>
+  <div class="stage" id="stage"></div>
+  <div class="dots" id="dots"></div>
+  <div class="hint" id="hint">← → navegar · Espaço pausa · F tela cheia</div>
+</div>
+<script>
+__NO_TRANSLATE__
+(function(){
+  var DATA = __DATA__;
+  var CFG = __CFG__;   // {coverMs, opMs, refreshMin}
+  var startedAt = Date.now();
+  var S = {idx:0, playing:true, timer:null, raf:null, t0:0, dur:0};
+
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+  function bars(rows){
+    var max = Math.max.apply(null, rows.map(function(r){return r[1];}).concat([1]));
+    return rows.map(function(r){
+      return '<div class="barrow"><span class="lbl">'+esc(r[0])+'</span><span class="trk"><i style="width:'+
+        (r[1]/max*100).toFixed(1)+'%;background:'+r[2]+'"></i></span><span class="val">'+r[1]+'</span></div>';
+    }).join("");
+  }
+  var M = DATA.map, HAS_UF = {};
+  DATA.slides.forEach(function(o){ HAS_UF[o.uf] = 1; });
+  // Mapa SVG: estados + pinos. "me" = obra do slide (destacada); o enquadramento é feito em frame().
+  function mapSVG(me, ufHl){
+    var st = Object.keys(M.states).map(function(uf){
+      return '<path class="st'+(uf===ufHl?' hl':HAS_UF[uf]?' has':'')+'" d="'+M.states[uf].d+'"/>';
+    }).join("");
+    var pins = DATA.slides.filter(function(o){ return o.x != null && (!me || o.cod !== me.cod); }).map(function(o){
+      return '<circle class="pin'+(o.geoAprox?' ap':'')+'" data-r="'+(me?0.6:1)+'" cx="'+o.x+'" cy="'+o.y+'" fill="'+o.setorColor+'"'+
+        (me?' opacity=".45"':'')+'/>';
+    }).join("");
+    if(me && me.x != null){
+      pins += '<circle class="ring" data-r="1.4" cx="'+me.x+'" cy="'+me.y+'"/>'+
+        '<circle class="pin me" data-r="1.4" cx="'+me.x+'" cy="'+me.y+'" fill="'+me.setorColor+'"/>';
+    }
+    return '<svg class="map" viewBox="0 0 '+M.W+' '+M.H+'" preserveAspectRatio="xMidYMid meet">'+st+pins+'</svg>';
+  }
+  // Enquadra o mapa no estado da obra (com folga) e ajusta o raio dos pinos ao zoom.
+  function frame(sec){
+    var svg = sec.querySelector("svg.map"); if(!svg) return;
+    var vb = [0, 0, M.W, M.H], hl = svg.querySelector(".st.hl");
+    if(hl){
+      var b = hl.getBBox(), pad = Math.max(b.width, b.height) * 0.35 + 30;
+      vb = [b.x - pad, b.y - pad, b.width + 2*pad, b.height + 2*pad];
+      svg.setAttribute("viewBox", vb.join(" "));
+    }
+    var k = Math.max(vb[2], vb[3]) / M.W;
+    svg.querySelectorAll("circle").forEach(function(c){ c.setAttribute("r", (9 * k * (+c.dataset.r || 1)).toFixed(2)); });
+  }
+  function coverHTML(c){
+    return '<div class="cover" style="display:contents"><div><div class="eyebrow">Pipeline de obras · eólico, mineração, data center e infraestrutura</div>'+
+      '<h2>Mapa de Obras</h2></div><div class="kpis">'+
+      '<div class="kpi"><b>'+c.total+'</b><span>Obras monitoradas · '+c.ufs+' estados</span></div>'+
+      '<div class="kpi"><b>'+c.build+'</b><span>Já em construção</span></div>'+
+      '<div class="kpi hl"><b>'+c.soon+'</b><span>Fase termina em até 60 dias</span></div>'+
+      '<div class="kpi"><b class="sm">'+esc(c.updated)+'</b><span>Atualização mais recente</span></div></div>'+
+      '<div class="cover-grid"><div class="mapbox">'+mapSVG(null, null)+'</div><div class="panels">'+
+      '<div class="panel"><h3>Por segmento</h3>'+bars(c.by_setor)+'</div>'+
+      (c.by_uf.length ? '<div class="panel"><h3>Estados com mais obras</h3><div class="ufs">'+bars(c.by_uf)+'</div></div>' : '')+
+      '</div></div></div>';
+  }
+  function due(d){
+    if(d.daysTerm == null) return '<span class="due">sem data</span>';
+    if(d.daysTerm < 0) return '<span class="due late">venceu há '+(-d.daysTerm)+' dias</span>';
+    return '<span class="due'+(d.daysTerm <= 60 ? ' soon' : '')+'">em '+d.daysTerm+' dias</span>';
+  }
+  function opHTML(d){
+    var build = d.status === "Obra em Construção";
+    var valor = d.valor && d.valor !== "-" ? d.valor : "não informado";
+    var emp = d.empresas.map(function(e){ return '<div class="row"><span>'+esc(e.nome)+'</span><span>'+esc(e.papel)+'</span></div>'; }).join("");
+    return '<div class="ob" style="display:contents"><div class="top">'+
+      '<span class="tag setor" style="--sc:'+d.setorColor+'">'+esc(d.setor)+'</span>'+
+      (d.isNew ? '<span class="tag new">Nova na semana</span>' : '')+
+      (build ? '<span class="tag build">Em construção</span>' : '<span class="tag wait">Não iniciada</span>')+
+      '<span class="tag">'+esc(d.fase)+'</span><span class="tag uf">'+esc(d.uf)+'</span></div>'+
+      '<h2>'+esc(d.tipo)+' · '+esc(d.cidade)+'/'+esc(d.uf)+'</h2>'+
+      '<div class="nome">'+esc(d.nome)+'</div>'+
+      '<div class="body"><div class="mapbox"><div class="where">'+esc(d.cidade)+' · '+esc(d.ufNome)+
+        (d.geoAprox ? '<small>município não localizado: ponto no centro do estado</small>' : '')+'</div>'+mapSVG(d, d.uf)+'</div>'+
+        '<div class="text">'+
+          '<div class="dates"><div class="key"><span>Término da fase</span><b>'+esc(d.pfase)+'</b>'+due(d)+'</div>'+
+          '<div class="key"><span>Entrega da obra</span><b>'+esc(d.pent === "-" ? "—" : d.pent)+'</b></div>'+
+          '<div><span>Atualização</span><b>'+esc(d.atu)+'</b></div>'+
+          '<div><span>Valor</span><b class="val">'+esc(valor)+'</b></div></div>'+
+          '<dl class="facts"><dt>Subsetor</dt><dd>'+esc(d.subsetor)+'</dd><dt>Especificação</dt><dd>'+esc(d.espec)+'</dd>'+
+          '<dt>Investimento</dt><dd>'+esc(d.invest)+'</dd></dl>'+
+          (d.obs ? '<div class="obs"><b>Histórico:</b> '+esc(d.obs)+'</div>' : '')+
+          (emp ? '<div class="emp"><b>Empresas envolvidas</b>'+emp+'<div class="more"></div></div>' : '')+
+        '</div></div>'+
+      '<div class="foot"><span>'+esc(d.im)+' · Obras Online · cód. '+esc(d.cod)+'</span><span class="sig">Oportunidade de locação de guindastes e área</span></div></div>';
+  }
+
+  // Deck: capa + uma obra por slide, com a capa repetida a cada CFG.coverEvery obras.
+  var deck = [{type:"cover"}], total = DATA.slides.length;
+  DATA.slides.forEach(function(s, k){
+    if(CFG.coverEvery && k > 0 && k % CFG.coverEvery === 0) deck.push({type:"cover"});
+    deck.push({type:"op", doc:s, pos:k+1});
+  });
+  var stage = document.getElementById("stage");
+  var SHOW_DOTS = deck.length <= 40;   // com centenas de slides, os pontinhos viram ruído: fica só o contador
+  var dotsEl = document.getElementById("dots");
+  dotsEl.innerHTML = SHOW_DOTS ? deck.map(function(){ return "<i></i>"; }).join("") : "";
+  if(!SHOW_DOTS) dotsEl.style.display = "none";
+  if(!total){
+    stage.insertAdjacentHTML("beforeend", '<div class="empty" style="position:absolute;inset:auto 0 8% 0;height:auto">Nenhuma obra na base ainda. Importe o Mapa de Obras no painel.</div>');
+  }
+
+  // Encaixa o texto do slide: reduz linhas do resumo e depois do impacto até caber, sem cortar no meio.
+  function fit(sl){
+    var col = sl.querySelector(".text"); if(!col) return;
+    // Obra: encurta o histórico e depois esconde as últimas empresas até caber.
+    var obs = col.querySelector(".obs"), rows = col.querySelectorAll(".emp .row"), obsL = 3, shown = rows.length;
+    var more = col.querySelector(".emp .more");
+    function apply(){
+      if(obs) obs.style.webkitLineClamp = obsL;
+      rows.forEach(function(r, k){ r.style.display = k < shown ? "" : "none"; });
+      if(more){ more.textContent = shown < rows.length ? "+ " + (rows.length - shown) + " empresa(s) no painel" : ""; }
+    }
+    apply();
+    while(col.scrollHeight > col.clientHeight + 1){
+      if(obs && obsL > 1) obsL--;
+      else if(shown > 1) shown--;
+      else break;
+      apply();
+    }
+  }
+
+  // Slides montados sob demanda: só o atual, o anterior (saindo) e o próximo (pré-carregado) ficam no DOM.
+  var built = {};
+  function el(i){
+    if(built[i]) return built[i];
+    var s = deck[i], sec = document.createElement("section");
+    sec.className = "slide";
+    sec.innerHTML = s.type === "cover" ? coverHTML(DATA.cover) : opHTML(s.doc);
+    stage.appendChild(sec);
+    frame(sec);
+    fit(sec);
+    built[i] = sec;
+    return sec;
+  }
+  function prune(keep){
+    Object.keys(built).forEach(function(k){
+      if(keep.indexOf(+k) < 0){ built[k].remove(); delete built[k]; }
+    });
+  }
+  window.addEventListener("resize", function(){ Object.keys(built).forEach(function(k){ fit(built[k]); }); });
+  if(document.fonts) document.fonts.ready.then(function(){ Object.keys(built).forEach(function(k){ fit(built[k]); }); });
+
+  // Posição salva entre recargas: a recarga traz notícias novas, mas o carrossel CONTINUA de onde parou
+  // (antes voltava para a 1ª notícia a cada ~10 min e nunca passava de ~60).
+  var POS_KEY = "radar_tv_obras_pos";
+  function store(){
+    try{ return window.parent.sessionStorage; }catch(e){}
+    try{ return window.sessionStorage; }catch(e){}
+    return null;
+  }
+  function savePos(){
+    var s = store(); if(!s || !S.lastIm) return;
+    try{ s.setItem(POS_KEY, JSON.stringify({im: S.lastIm, pos: S.lastPos, t: Date.now()})); }catch(e){}
+  }
+  function resumeIndex(){
+    var s = store(); if(!s) return 0;
+    var saved = null;
+    try{ saved = JSON.parse(s.getItem(POS_KEY) || "null"); s.removeItem(POS_KEY); }catch(e){}
+    if(!saved || Date.now() - saved.t > 6*3600*1000) return 0;   // posição de mais de 6 h atrás: recomeça
+    for(var k = 0; k < deck.length; k++){                          // acha a última notícia exibida no deck novo
+      if(deck[k].type === "op" && deck[k].doc.im === saved.im) return (k + 1) % deck.length;
+    }
+    for(var j = 0; j < deck.length; j++){                          // ela saiu da base: usa a posição numérica
+      if(deck[j].type === "op" && deck[j].pos > saved.pos) return j;
+    }
+    return 0;                                                       // passou do fim: nova volta
+  }
+  function reloadPage(){
+    savePos();
+    // Recarrega o painel Streamlit (dados novos da coleta). Se o iframe não puder, recarrega só o carrossel.
+    try{ window.top.location.reload(); }catch(e){ location.reload(); }
+  }
+  function show(i){
+    var n = deck.length;
+    i = ((i % n) + n) % n;
+    if(deck[i].type === "cover" && i !== S.idx && (Date.now() - startedAt) > CFG.refreshMin*60000){ reloadPage(); return; }
+    var prev = S.idx, cur = el(i), next = (i + 1) % n;
+    if(built[prev] && prev !== i){ built[prev].classList.remove("on"); built[prev].classList.add("off"); }
+    requestAnimationFrame(function(){ cur.classList.remove("off"); cur.classList.add("on"); });
+    el(next);                                  // pré-monta o próximo (imagens começam a carregar)
+    setTimeout(function(){ prune([S.idx, (S.idx + 1) % n]); }, 800);
+    if(SHOW_DOTS) document.querySelectorAll("#dots i").forEach(function(d,k){ d.classList.toggle("on", k===i); });
+    document.getElementById("counter").textContent = deck[i].type === "cover" ? "Capa" : (deck[i].pos + " / " + total);
+    S.idx = i;
+    if(deck[i].type === "op"){ S.lastIm = deck[i].doc.im; S.lastPos = deck[i].pos; }
+    S.dur = deck[i].type === "cover" ? CFG.coverMs : CFG.opMs;
+    restart();
+  }
+  function restart(){
+    clearTimeout(S.timer); cancelAnimationFrame(S.raf);
+    var bar = document.getElementById("prog");
+    if(!S.playing) return;
+    S.t0 = performance.now();
+    S.timer = setTimeout(function(){ show(S.idx+1); }, S.dur);
+    (function tick(){
+      var p = Math.min(1, (performance.now()-S.t0)/S.dur);
+      bar.style.width = (p*100).toFixed(2)+"%";
+      if(p < 1 && S.playing) S.raf = requestAnimationFrame(tick);
+    })();
+  }
+  function togglePlay(){
+    S.playing = !S.playing;
+    var b = document.getElementById("play");
+    b.innerHTML = S.playing ? "&#10074;&#10074;" : "&#9654;&#xFE0E;";
+    if(S.playing) restart(); else { clearTimeout(S.timer); cancelAnimationFrame(S.raf); }
+  }
+  function fullscreen(){
+    var el = document.documentElement;
+    try{
+      var topDoc = window.top.document;
+      if(topDoc.fullscreenElement){ topDoc.exitFullscreen(); return; }
+      el = topDoc.documentElement;
+    }catch(e){}
+    if(document.fullscreenElement){ document.exitFullscreen(); return; }
+    if(el.requestFullscreen) el.requestFullscreen().catch(function(){});
+  }
+  function clock(){
+    document.getElementById("clock").textContent =
+      new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",timeZone:"America/Fortaleza"});
+  }
+  var tv = document.getElementById("tv"), hint = document.getElementById("hint"), idleT;
+  function wake(){
+    tv.classList.remove("idle"); hint.style.opacity = "1"; clearTimeout(idleT);
+    idleT = setTimeout(function(){ tv.classList.add("idle"); hint.style.opacity = "0"; }, 4000);
+  }
+  document.getElementById("prev").onclick = function(){ show(S.idx-1); };
+  document.getElementById("next").onclick = function(){ show(S.idx+1); };
+  document.getElementById("play").onclick = togglePlay;
+  document.getElementById("full").onclick = fullscreen;
+  document.addEventListener("mousemove", wake);
+  document.addEventListener("keydown", function(e){
+    if(e.key === "ArrowRight"){ show(S.idx+1); }
+    else if(e.key === "ArrowLeft"){ show(S.idx-1); }
+    else if(e.key === " "){ e.preventDefault(); togglePlay(); }
+    else if(e.key === "f" || e.key === "F"){ fullscreen(); }
+    else return;
+    wake();
+  });
+  clock(); setInterval(clock, 15000);
+  wake();
+  S.idx = -1;            // nenhum slide anterior
+  show(resumeIndex());
+})();
+</script>
+</body>
+</html>

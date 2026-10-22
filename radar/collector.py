@@ -207,6 +207,21 @@ def reclassify_all() -> int:
     return len(rows)
 
 
+def update_obras(origem: str = "agendado") -> None:
+    """Junto com a coleta: importa o Mapa de Obras mais recente de OBRAS_PASTA, se o arquivo mudou."""
+    from . import obras
+
+    try:
+        res = obras.auto_import(origem)
+    except Exception as exc:  # a coleta de notícias não deve falhar por causa das obras
+        log.exception("Erro ao importar o Mapa de Obras")
+        db.log_error(None, f"Obras: {exc}", engine="obras", details=traceback.format_exc())
+        return
+    if res and not res.get("sem_mudanca"):
+        log.info("Mapa de Obras: %(total)s obras (%(novas)s novas, %(atualizadas)s atualizadas, "
+                 "%(removidas)s removidas)", res)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Coleta de notícias do Radar Cordeiro")
     parser.add_argument("--agendado", action="store_true", help="marca a execução como agendada")
@@ -216,6 +231,7 @@ def main() -> None:
         print(f"{reclassify_all()} notícias reclassificadas.")
         return
     result = run_collection("agendado" if args.agendado else "manual")
+    update_obras("agendado" if args.agendado else "manual")
     print(result)
 
 

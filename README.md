@@ -16,8 +16,13 @@ radar/
   dossier.py               Ficha do executivo: importação da newsletter e ficha preliminar automática
   images.py                até 2 imagens por notícia, baixadas em static/imagens/
   tvdeck.py, tv.html       dados e layout do Modo TV (carrossel)
+  obras.py, obras.html     Mapa de Obras: importação, painel com mapa e dados do Modo TV de obras
+  tv_obras.html            layout do Modo TV do Mapa de Obras
+  brasil_mapa.json         contorno dos estados usado nos mapas de obras
   ui.py                    CSS e blocos HTML da identidade visual da newsletter
 pages/tv.py                rota /tv — carrossel em tela cheia para a TV
+pages/obras.py             rota /obras — Mapa de Obras (mapa, fichas, Bitrix, Excel, importação)
+pages/tv_obras.py          rota /tv_obras — carrossel das obras para a TV
 config/termos.yaml         termos de busca por tema (também editáveis na aba Configuração)
 scripts/agendar_tarefa_windows.ps1   registra a coleta diária no Agendador de Tarefas do Windows
 data/radar.db              banco (criado automaticamente)
@@ -184,6 +189,38 @@ Para deixar a TV fixa no carrossel, abra o navegador em modo quiosque, por exemp
 `chrome --kiosk http://<ip-do-computador>:8501/tv`. Para a TV acessar o painel pela rede, o
 Streamlit precisa estar rodando no computador e a porta 8501 liberada no firewall.
 
+### Mapa de Obras (rotas `/obras` e `/tv_obras`)
+
+O Mapa de Obras reúne as obras do **Obras Online** (eólico, mineração, data center e infraestrutura)
+no mesmo banco do Radar (SQLite ou Supabase, tabelas `obras` e `obras_imports`).
+
+- **Painel (`/obras`):** o mapa interativo do `mapa_obras_cordeiro-PAINEL.html`, com os mesmos filtros e
+  fichas, alimentado pelo banco. Abaixo dele, o envio da obra ao Bitrix e o botão **Baixar Excel das
+  obras** (abas Obras, com Responsável e Andamento, e Empresas).
+- **Modo TV (`/tv_obras`):** mesmo carrossel do Modo TV de notícias. A capa mostra os indicadores e o mapa
+  do Brasil com todas as obras; cada slide mostra o estado da obra no mapa, as datas previstas (com o
+  aviso "em N dias"), os dados da obra e as empresas. A ordem é: novas da semana, depois a fase que
+  termina antes. Aceita os mesmos parâmetros do `/tv` (`segundos`, `capa`, `capa_a_cada` — padrão 20 —,
+  `max` e `recarregar`), recarrega os dados ao passar pela capa e continua de onde parou.
+- **Bitrix:** o lead leva o código `IM-OBR-<código da obra>` (a busca por `IM-` no Bitrix encontra notícias
+  e obras), a fase, as datas, o valor e as empresas. O envio fica em `crm_leads` (coluna `obra_cod`).
+- **Atualização dos dados:** cada importação é um retrato completo. Obras fora do arquivo saem do painel
+  e da TV, mas continuam no banco. Há três formas:
+  1. **Automática:** defina `OBRAS_PASTA` no `.env` com a pasta onde fica o `mapa_obras_cordeiro-PAINEL.html`.
+     A coleta diária (Agendador do Windows ou `scheduler.py`) importa o HTML de obras mais recente da
+     pasta, só quando ele mudou. Basta salvar a versão nova do arquivo na pasta.
+  2. **Pelo painel:** o administrador envia o arquivo no fim da página `/obras` (ou clica em
+     "Importar agora da pasta"). O histórico das importações aparece logo abaixo.
+  3. **Pela linha de comando:**
+
+```bash
+.venv\Scripts\python.exe -m radar.obras "caminho\mapa_obras_cordeiro-PAINEL.html"
+```
+
+A TV de obras fica em `chrome --kiosk http://<ip-do-computador>:8501/tv_obras`. O Obras Online não tem
+API aberta, então a fonte continua sendo o HTML exportado do painel de obras. Os nomes das obras aparecem
+mascarados, como na fonte.
+
 ### Imagens das notícias
 
 Em cada coleta, cada notícia nova recebe até 2 imagens, salvas em `static/imagens/` e registradas
@@ -281,7 +318,9 @@ Coleta avulsa pela linha de comando:
 | `accounts`  | canais oficiais de fornecedores das empresas (contatos e cadastro) |
 | `news_images` | até 2 imagens por notícia: arquivo, origem, tamanho e hash visual |
 | `image_blocklist` | hashes de imagens repetidas entre notícias (anúncios), ignoradas nas próximas coletas |
-| `crm_leads` | leads enviados ao Bitrix: notícia, lead criado, responsável, status e resposta |
+| `crm_leads` | leads enviados ao Bitrix: notícia ou obra, lead criado, responsável, status e resposta |
+| `obras` | obras do Mapa de Obras (JSON da ficha), ativas ou fora do último arquivo |
+| `obras_imports` | cada importação do Mapa de Obras: origem, arquivo e contagens |
 
 Para consultar o banco fora do painel, abra `data/radar.db` em qualquer cliente SQLite (por exemplo,
 o DB Browser for SQLite).

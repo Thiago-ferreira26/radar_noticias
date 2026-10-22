@@ -1,8 +1,10 @@
-"""Acesso ao banco (SQLite local ou Postgres do Supabase): execuções, buscas, notícias, fichas, imagens, leads e erros."""
+"""Acesso ao banco (SQLite local ou Postgres do Supabase): execuções, buscas, notícias, fichas, imagens, obras,
+leads e erros."""
 from __future__ import annotations
 
 import atexit
 import sqlite3
+import threading
 from contextlib import contextmanager
 from datetime import timedelta
 
@@ -127,6 +129,31 @@ CREATE TABLE IF NOT EXISTS crm_leads (
     sent_at       TEXT NOT NULL
 );
 
+-- Mapa de Obras (Obras Online): uma linha por obra, com o JSON da ficha. ativa = 0: saiu do último arquivo.
+CREATE TABLE IF NOT EXISTS obras (
+    cod           TEXT PRIMARY KEY,              -- código da obra no Obras Online
+    setor         TEXT,                          -- Eólico | Mineração | Data Center | Infraestrutura
+    uf            TEXT,
+    status        TEXT,
+    data          TEXT NOT NULL,                 -- JSON da obra (formato do mapa_obras_cordeiro-PAINEL.html)
+    ativa         INTEGER NOT NULL DEFAULT 1,
+    first_seen_at TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+);
+
+-- Cada importação do Mapa de Obras (manual, agendada ou pela linha de comando).
+CREATE TABLE IF NOT EXISTS obras_imports (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    imported_at   TEXT NOT NULL,
+    origem        TEXT NOT NULL,
+    file_name     TEXT,
+    sha1          TEXT,
+    n_total       INTEGER DEFAULT 0,
+    n_new         INTEGER DEFAULT 0,
+    n_updated     INTEGER DEFAULT 0,
+    n_removed     INTEGER DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS errors (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     run_id        INTEGER REFERENCES runs(id),
@@ -152,11 +179,12 @@ def _ts() -> str:
 # Colunas acrescentadas depois da primeira versão do esquema (migração automática).
 EXTRA_COLUMNS = [("news", "manual_class", "INTEGER DEFAULT 0"),  # 1 = classificação do analista (newsletter)
                  ("news_images", "ahash", "TEXT"), ("news_images", "kind", "TEXT"),
-                 ("runs", "firecrawl_used", "INTEGER DEFAULT 0")]
+                 ("runs", "firecrawl_used", "INTEGER DEFAULT 0"),
+                 ("crm_leads", "obra_cod", "TEXT")]  # lead criado a partir de uma obra do Mapa de Obras
 # Ordem de cópia/criação respeitando as chaves estrangeiras.
 TABLES = ["runs", "searches", "news", "dossiers", "accounts", "exa_usage", "api_usage", "news_images",
-          "image_blocklist", "crm_leads", "errors"]
-IDENTITY_TABLES = ["runs", "searches", "news", "crm_leads", "errors"]
+          "image_blocklist", "crm_leads", "obras", "obras_imports", "errors"]
+IDENTITY_TABLES = ["runs", "searches", "news", "crm_leads", "obras_imports", "errors"]
 
 
 def _encode_password(url: str) -> str:
@@ -314,12 +342,21 @@ def connect():
 
 
 _initialized = False
+_init_lock = threading.Lock()  # sessões do Streamlit (threads) abrindo juntas davam DeadlockDetected no DDL
 
 
 def init_db() -> None:
     global _initialized
     if _initialized and backend() == "postgres":  # no Postgres o esquema é conferido uma vez por processo
         return
+    with _init_lock:
+        if _initialized and backend() == "postgres":
+            return
+        _create_schema()
+        _initialized = True
+
+
+def _create_schema() -> None:
     with connect() as conn:
         if backend() == "postgres":
             conn.execute("; ".join(pg_schema()))  # um envio só (sem parâmetros, vários comandos)
@@ -329,7 +366,6 @@ def init_db() -> None:
                 cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
                 if col not in cols:
                     conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
-    _initialized = True
 
 
 # ---------------------------------------------------------------- execuções

@@ -12,7 +12,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from radar import config
-from radar.collector import log, run_collection, setup_logging
+from radar.collector import log, run_collection, setup_logging, update_obras
 
 HOUR = int(os.getenv("RADAR_HORA", "8"))
 MINUTE = int(os.getenv("RADAR_MINUTO", "0"))
@@ -21,6 +21,7 @@ MINUTE = int(os.getenv("RADAR_MINUTO", "0"))
 def job() -> None:
     try:
         run_collection("agendado")
+        update_obras("agendado")
     except Exception:  # o agendador nunca deve morrer por causa de uma coleta
         log.exception("Erro não tratado na coleta agendada")
 
