@@ -317,7 +317,10 @@ def _pg_pool():
         # autocommit: cada comando é uma única ida e volta ao servidor (o Supabase pode estar longe, ~200 ms);
         # as operações do painel são de um comando só, e a migração usa transação explícita.
         # prepare_threshold=None: compatível com o pooler do Supabase (Supavisor).
+        # check: testa a conexão antes de entregá-la. O Supabase fecha conexões paradas, e a TV ligada o dia
+        # todo dava "server closed the connection unexpectedly" na recarga seguinte.
         _pool = ConnectionPool(database_url(), min_size=1, max_size=6, open=True, timeout=30,
+                               check=ConnectionPool.check_connection, max_idle=300,
                                kwargs={"autocommit": True, "prepare_threshold": None})
         atexit.register(_pool.close)  # fecha antes do encerramento do Python (evita aviso no fim de scripts)
     return _pool
