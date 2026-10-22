@@ -1,0 +1,58 @@
+"""Modo TV do Mapa de Obras — carrossel em tela cheia para a TV (rota /tv_obras).
+
+    http://<servidor>:8501/tv_obras
+Parâmetros opcionais na URL: ?segundos=18&capa=12&capa_a_cada=20&max=0&recarregar=10 (max=0: todas)
+"""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import streamlit as st
+import streamlit.components.v1 as components
+
+from radar import db, obras
+from radar.ui import NO_TRANSLATE_JS
+
+st.set_page_config(page_title="Mapa de Obras · TV", page_icon="📺", layout="wide",
+                   initial_sidebar_state="collapsed")
+
+# Esconde toda a interface do Streamlit e estica o carrossel para a tela inteira.
+st.markdown(
+    """<style>
+    header, footer, [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stSidebar"],
+    [data-testid="stSidebarCollapsedControl"], [data-testid="stDecoration"], [data-testid="stStatusWidget"]{display:none !important;}
+    html, body, .stApp, [data-testid="stAppViewContainer"]{background:#0b1f1e !important; overflow:hidden !important;}
+    .block-container{padding:0 !important; max-width:100% !important;}
+    iframe{position:fixed !important; inset:0 !important; width:100vw !important; height:100vh !important;
+      border:0 !important; z-index:1000;}
+    </style>""",
+    unsafe_allow_html=True,
+)
+
+
+def _int(name: str, default: int, lo: int, hi: int) -> int:
+    try:
+        return max(lo, min(hi, int(st.query_params.get(name, default))))
+    except ValueError:
+        return default
+
+
+cfg = {
+    "opMs": _int("segundos", 18, 5, 120) * 1000,
+    "coverMs": _int("capa", 12, 5, 120) * 1000,
+    "refreshMin": _int("recarregar", 10, 1, 240),  # recarrega os dados ao voltar para a capa após N minutos
+    "coverEvery": _int("capa_a_cada", 20, 0, 1000),  # repete a capa a cada N obras (0 = só no início)
+}
+try:
+    deck = obras.build_tv_deck(max_obras=_int("max", 0, 0, 5000) or None)  # 0 = todas as obras
+except db.DatabaseConnectionError as exc:
+    st.error("**Banco de dados indisponível**\n\n" + str(exc).replace("\n", "  \n"))
+    st.stop()
+
+template = (Path(__file__).resolve().parent.parent / "radar" / "tv_obras.html").read_text(encoding="utf-8")
+page = (template
+        .replace("__DATA__", json.dumps(deck, ensure_ascii=False).replace("</", "<\\/"))
+        .replace("__CFG__", json.dumps(cfg))
+        .replace("__NO_TRANSLATE__", NO_TRANSLATE_JS))
+components.html(page, height=1080, scrolling=False)

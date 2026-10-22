@@ -93,7 +93,36 @@ def workbook_bytes(docs: list[tuple[dict, dict]], accounts: dict) -> bytes:
          ["Empresa", "Etapa", "Como proceder", "Abrir cadastro / canal", "Fonte oficial"],
          register, [30, 9, 100, 45, 40], set()),
     ]
+    return _book_bytes(sheets)
 
+
+def obras_workbook_bytes(obras: list[dict]) -> bytes:
+    """Excel do Mapa de Obras: aba Obras (com Responsável/Andamento para preencher) e aba Empresas."""
+    rows, empresas = [], []
+    for o in obras:
+        nomes = o.get("empresas") or []
+        rows.append([o["im"], o.get("setor"), o.get("tipo"), o.get("nome"), o.get("cidade"), o.get("uf"),
+                     o.get("status"), o.get("faseCurta"), o.get("pfase"), o.get("pent"), o.get("valor"),
+                     o.get("invest"), "\n".join(f"{e.get('nome')} ({e.get('papel')})" for e in nomes),
+                     o.get("obs"), o.get("atu"), "", "Não iniciado"])
+        empresas += [[o["im"], o.get("tipo"), f"{o.get('cidade')}/{o.get('uf')}", e.get("nome"), e.get("papel")]
+                     for e in nomes]
+    sheets = [
+        ("Obras", "Radar Cordeiro — Mapa de Obras (Obras Online)",
+         "Filtre a lista. Prev. término da fase indica quando a obra muda de etapa. Responsável e andamento são "
+         "campos para preencher.",
+         ["Lead IM", "Segmento", "Tipo de obra", "Nome na fonte", "Cidade", "UF", "Situação", "Fase / etapa",
+          "Prev. término fase", "Prev. entrega", "Valor", "Investimento", "Empresas", "Histórico",
+          "Atualização na fonte", "Responsável", "Andamento"],
+         rows, [17, 15, 32, 30, 20, 7, 20, 30, 14, 13, 18, 12, 50, 50, 14, 22, 20], {15, 16}),
+        ("Empresas", "Empresas por obra", "Empreendedores, construtoras e demais empresas informadas na fonte.",
+         ["Lead IM", "Tipo de obra", "Local", "Empresa", "Papel"], empresas, [17, 32, 24, 50, 24], set()),
+    ]
+    return _book_bytes(sheets)
+
+
+def _book_bytes(sheets: list) -> bytes:
+    """Grava as abas no visual da newsletter; na 1ª aba, a coluna "Andamento" ganha a lista suspensa."""
     wb = Workbook()
     wb.remove(wb.active)
     top = Alignment(vertical="top", wrap_text=True)
@@ -135,9 +164,10 @@ def workbook_bytes(docs: list[tuple[dict, dict]], accounts: dict) -> bytes:
         last = get_column_letter(len(headers))
         ws.auto_filter.ref = f"A4:{last}{max(4, len(rows) + 4)}"
         ws.freeze_panes = "C5" if index < 2 else "B5"
-        if index == 0 and rows:
+        if index == 0 and rows and "Andamento" in headers:
+            col = get_column_letter(headers.index("Andamento") + 1)
             dv = DataValidation(type="list", formula1='"' + ",".join(STATUS) + '"', allow_blank=True)
-            dv.add(f"J5:J{len(rows) + 4}")
+            dv.add(f"{col}5:{col}{len(rows) + 4}")
             ws.add_data_validation(dv)
         ws.page_setup.orientation = "landscape"
         ws.page_setup.fitToWidth, ws.page_setup.fitToHeight = 1, 0
