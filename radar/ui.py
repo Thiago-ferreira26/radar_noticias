@@ -266,14 +266,14 @@ def fmt_date(value, with_time: bool = False) -> str:
     return dt.strftime("%d/%m/%Y %H:%M" if with_time else "%d/%m/%Y")
 
 
-def header(stats: list[tuple[str, str, bool]]) -> str:
+def header(stats: list[tuple[str, str, bool]], title: str = "Radar Cordeiro",
+           subtitle: str = "Inteligência de Mercado — sinais de demanda para locação de guindastes e área") -> str:
     cells = "".join(
         f'<div class="rc-stat{" hl" if hl else ""}"><b>{h(v)}</b><span>{h(lbl)}</span></div>' for v, lbl, hl in stats
     )
     return (
         '<div class="rc-top"><div class="rc-brand"><div class="rc-mark" aria-hidden="true"></div><div>'
-        "<h1>Radar Cordeiro</h1>"
-        "<p>Inteligência de Mercado — sinais de demanda para locação de guindastes e área</p>"
+        f"<h1>{h(title)}</h1><p>{h(subtitle)}</p>"
         f'</div></div><div class="rc-stats">{cells}</div></div>'
     )
 

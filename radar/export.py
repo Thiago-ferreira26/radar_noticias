@@ -108,7 +108,7 @@ def obras_workbook_bytes(obras: list[dict]) -> bytes:
         empresas += [[o["im"], o.get("tipo"), f"{o.get('cidade')}/{o.get('uf')}", e.get("nome"), e.get("papel")]
                      for e in nomes]
     sheets = [
-        ("Obras", "Radar Cordeiro — Mapa de Obras (Obras Online)",
+        ("Obras", "Mapa de Obras Cordeiro (Obras Online)",
          "Filtre a lista. Prev. término da fase indica quando a obra muda de etapa. Responsável e andamento são "
          "campos para preencher.",
          ["Lead IM", "Segmento", "Tipo de obra", "Nome na fonte", "Cidade", "UF", "Situação", "Fase / etapa",

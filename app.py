@@ -253,10 +253,8 @@ if is_admin:  # uso da cota do Exa: só na visão de administrador
     stats.append((f"{fc_today['used']}/{fc_limit}", "Buscas Firecrawl hoje", True))
 stats.append((last_update, "Última atualização", False))
 html(ui.header(stats))
-c_tv, c_obras, c_tv_obras, c_admin = st.columns([3, 2, 3, 2], vertical_alignment="center")
+c_tv, _, c_admin = st.columns([3, 5, 2], vertical_alignment="center")
 c_tv.page_link("pages/tv.py", label="Abrir Modo TV (carrossel para a TV)", icon="📺")
-c_obras.page_link("pages/obras.py", label="Mapa de Obras", icon="🏗️")
-c_tv_obras.page_link("pages/tv_obras.py", label="Modo TV · Mapa de Obras", icon="📺")
 with c_admin:
     auth.login_widget()
 html(ui.about(news["source"].value_counts().head(12).index.tolist() if len(news) else []))

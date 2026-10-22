@@ -21,8 +21,9 @@ radar/
   brasil_mapa.json         contorno dos estados usado nos mapas de obras
   ui.py                    CSS e blocos HTML da identidade visual da newsletter
 pages/tv.py                rota /tv — carrossel em tela cheia para a TV
-pages/obras.py             rota /obras — Mapa de Obras (mapa, fichas, Bitrix, Excel, importação)
-pages/tv_obras.py          rota /tv_obras — carrossel das obras para a TV
+mapa_obras.py              app separado do Mapa de Obras (streamlit run mapa_obras.py)
+obras_app/painel.py        página inicial do Mapa de Obras (mapa, fichas, Bitrix, Excel, importação)
+obras_app/tv.py            rota /tv do Mapa de Obras — carrossel das obras para a TV
 config/termos.yaml         termos de busca por tema (também editáveis na aba Configuração)
 scripts/agendar_tarefa_windows.ps1   registra a coleta diária no Agendador de Tarefas do Windows
 data/radar.db              banco (criado automaticamente)
@@ -189,15 +190,24 @@ Para deixar a TV fixa no carrossel, abra o navegador em modo quiosque, por exemp
 `chrome --kiosk http://<ip-do-computador>:8501/tv`. Para a TV acessar o painel pela rede, o
 Streamlit precisa estar rodando no computador e a porta 8501 liberada no firewall.
 
-### Mapa de Obras (rotas `/obras` e `/tv_obras`)
+### Mapa de Obras (app separado: `mapa_obras.py`)
 
-O Mapa de Obras reúne as obras do **Obras Online** (eólico, mineração, data center e infraestrutura)
-no mesmo banco do Radar (SQLite ou Supabase, tabelas `obras` e `obras_imports`).
+O Mapa de Obras Cordeiro é um **app próprio**, fora do Radar de notícias, com as obras do **Obras Online**
+(eólico, mineração, data center e infraestrutura). Ele usa o mesmo banco (SQLite ou Supabase, tabelas
+`obras` e `obras_imports`), o mesmo Bitrix e o mesmo login de administrador.
 
-- **Painel (`/obras`):** o mapa interativo do `mapa_obras_cordeiro-PAINEL.html`, com os mesmos filtros e
+```bash
+.venv\Scripts\python.exe -m streamlit run mapa_obras.py --server.port 8502
+```
+
+No Streamlit Community Cloud, ele é um segundo app do mesmo repositório: *Create app* → branch `main`,
+**Main file path `mapa_obras.py`**, e os mesmos Secrets do Radar (`SUPABASE_DB_URL`, `BITRIX_WEBHOOK_URL`,
+`ADMIN_USER`, `ADMIN_PASSWORD`).
+
+- **Painel (`/`):** o mapa interativo do `mapa_obras_cordeiro-PAINEL.html`, com os mesmos filtros e
   fichas, alimentado pelo banco. Abaixo dele, o envio da obra ao Bitrix e o botão **Baixar Excel das
   obras** (abas Obras, com Responsável e Andamento, e Empresas).
-- **Modo TV (`/tv_obras`):** mesmo carrossel do Modo TV de notícias. A capa mostra os indicadores e o mapa
+- **Modo TV (`/tv`):** mesmo carrossel do Modo TV de notícias. A capa mostra os indicadores e o mapa
   do Brasil com todas as obras; cada slide mostra o estado da obra no mapa, as datas previstas (com o
   aviso "em N dias"), os dados da obra e as empresas. A ordem é: novas da semana, depois a fase que
   termina antes. Aceita os mesmos parâmetros do `/tv` (`segundos`, `capa`, `capa_a_cada` — padrão 20 —,
@@ -209,7 +219,7 @@ no mesmo banco do Radar (SQLite ou Supabase, tabelas `obras` e `obras_imports`).
   1. **Automática:** defina `OBRAS_PASTA` no `.env` com a pasta onde fica o `mapa_obras_cordeiro-PAINEL.html`.
      A coleta diária (Agendador do Windows ou `scheduler.py`) importa o HTML de obras mais recente da
      pasta, só quando ele mudou. Basta salvar a versão nova do arquivo na pasta.
-  2. **Pelo painel:** o administrador envia o arquivo no fim da página `/obras` (ou clica em
+  2. **Pelo painel:** o administrador envia o arquivo no fim da página inicial do Mapa de Obras (ou clica em
      "Importar agora da pasta"). O histórico das importações aparece logo abaixo.
   3. **Pela linha de comando:**
 
@@ -217,7 +227,7 @@ no mesmo banco do Radar (SQLite ou Supabase, tabelas `obras` e `obras_imports`).
 .venv\Scripts\python.exe -m radar.obras "caminho\mapa_obras_cordeiro-PAINEL.html"
 ```
 
-A TV de obras fica em `chrome --kiosk http://<ip-do-computador>:8501/tv_obras`. O Obras Online não tem
+A TV de obras fica em `chrome --kiosk http://<ip-do-computador>:8502/tv`. O Obras Online não tem
 API aberta, então a fonte continua sendo o HTML exportado do painel de obras. Os nomes das obras aparecem
 mascarados, como na fonte.
 

@@ -1,4 +1,5 @@
-"""Mapa de Obras (rota /obras): obras do Obras Online no mapa, com envio ao Bitrix, Excel e Modo TV.
+"""Mapa de Obras Cordeiro (página inicial do app mapa_obras.py): obras do Obras Online no mapa, com envio ao
+Bitrix, Excel e Modo TV.
 
 O mapa e as fichas são o painel "mapa_obras_cordeiro-PAINEL.html" (radar/obras.html), alimentado pelo banco.
 """
@@ -9,7 +10,7 @@ import streamlit.components.v1 as components
 
 from radar import auth, config, crm, db, export, obras, ui
 
-st.set_page_config(page_title="Mapa de Obras · Radar Cordeiro", page_icon="🏗️", layout="wide")
+st.set_page_config(page_title="Mapa de Obras Cordeiro", page_icon="🏗️", layout="wide")
 st.markdown(ui.CSS, unsafe_allow_html=True)
 ui.disable_browser_translation()
 try:
@@ -48,10 +49,10 @@ html(ui.header([
     (f"{sum(o.get('status') == obras.EM_CONSTRUCAO for o in lista)}", "Em construção", False),
     (f"{sum(o['daysTerm'] is not None and 0 <= o['daysTerm'] <= 60 for o in lista)}", "Fase termina em até 60 dias", True),
     (ui.fmt_date(last["imported_at"], True) if last else "—", "Última importação", False),
-]))
-c_back, c_tv, _, c_admin = st.columns([2.2, 3, 2.8, 2], vertical_alignment="center")
-c_back.page_link("app.py", label="Radar de notícias", icon="📡")
-c_tv.page_link("pages/tv_obras.py", label="Abrir Modo TV · Mapa de Obras", icon="📺")
+], title="Mapa de Obras Cordeiro",
+   subtitle="Inteligência de Mercado — obras de eólico, mineração, data center e infraestrutura (Obras Online)"))
+c_tv, _, c_admin = st.columns([3, 5, 2], vertical_alignment="center")
+c_tv.page_link("obras_app/tv.py", label="Abrir Modo TV (carrossel para a TV)", icon="📺")
 with c_admin:
     auth.login_widget()
 is_admin = auth.is_admin()

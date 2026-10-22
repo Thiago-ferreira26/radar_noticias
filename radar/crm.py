@@ -120,7 +120,7 @@ def build_obra_body(o: dict) -> str:
     empresas = "".join(f"• {escape(e.get('nome') or '')} — {escape(e.get('papel') or '')}<br>"
                        for e in o.get("empresas") or [])
     return (
-        f"<b>Radar Cordeiro — Mapa de Obras (Obras Online)</b><br>"
+        f"<b>Mapa de Obras Cordeiro (Obras Online)</b><br>"
         f"<b>Lead IM:</b> {escape(o['im'])}<br><br>"
         + line("Segmento", o.get("setor"))
         + line("Tipo de obra", o.get("tipo"))
@@ -149,7 +149,7 @@ def send_obra_lead(o: dict, user: dict) -> dict:
         "TITLE": f"[{o['im']}] {title}"[:255],
         "COMMENTS": build_obra_body(o),
         "ASSIGNED_BY_ID": int(user["id"]),
-        "SOURCE_DESCRIPTION": f"Radar Cordeiro {o['im']} — Mapa de Obras (Obras Online)"[:255],
+        "SOURCE_DESCRIPTION": f"Mapa de Obras Cordeiro {o['im']} — Obras Online"[:255],
     }
     return _create_lead(fields, user, {"obra_cod": o.get("cod")}, title)
 

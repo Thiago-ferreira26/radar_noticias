@@ -1,6 +1,6 @@
-"""Modo TV do Mapa de Obras — carrossel em tela cheia para a TV (rota /tv_obras).
+"""Modo TV do Mapa de Obras — carrossel em tela cheia para a TV (rota /tv do app mapa_obras.py).
 
-    http://<servidor>:8501/tv_obras
+    http://<servidor>:8502/tv
 Parâmetros opcionais na URL: ?segundos=18&capa=12&capa_a_cada=20&max=0&recarregar=10 (max=0: todas)
 """
 from __future__ import annotations
@@ -14,7 +14,7 @@ import streamlit.components.v1 as components
 from radar import db, obras
 from radar.ui import NO_TRANSLATE_JS
 
-st.set_page_config(page_title="Mapa de Obras · TV", page_icon="📺", layout="wide",
+st.set_page_config(page_title="Mapa de Obras Cordeiro · TV", page_icon="📺", layout="wide",
                    initial_sidebar_state="collapsed")
 
 # Esconde toda a interface do Streamlit e estica o carrossel para a tela inteira.
