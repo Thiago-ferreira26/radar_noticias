@@ -110,12 +110,17 @@ Ficam fora da Visão do dia, do Modo TV, dos indicadores e das exportações, ma
     crimes e acidentes, listas genéricas de licitação, "valor de mercado"… A comparação é por
     palavra inteira. Na coleta, essas notícias nem entram.
 - **Repetidas:** a mesma matéria publicada por vários sites (`radar/dedupe.py`) aparece **uma vez**.
-  - **Quando conta como repetida:** títulos quase idênticos, ou muito parecidos e sem números
-    conflitantes, publicados com até 30 dias de diferença.
-  - **Qual fica visível:** a ficha pesquisada ou incluída à mão, depois Exa, Firecrawl e
-    DuckDuckGo, e por fim a mais antiga. As outras ficam com `duplicate_of`.
+  - **Quando conta como repetida:** compara o título e também o conteúdo (título + resumo, em que
+    palavras raras como "Diamante" e "coco" pesam mais que comuns como "energia"). Assim a mesma
+    notícia escrita de outro jeito também se junta.
+  - **O que nunca se junta:** notícias com números que não batem ("R$ 20 bi" x "R$ 18 bi") ou de
+    estados diferentes ("Licitações em PE" x "em SP"). A janela é de 30 dias.
+  - **Qual fica visível:** a ficha pesquisada ou incluída à mão; senão, a **mais recente**.
   - **Quando roda:** o agrupamento é refeito a cada coleta e a cada inclusão por link, e as cópias
     não baixam imagem.
+  - **Casos que a regra não pega:** junte à mão, com `python -m radar.dedupe --juntar <id-da-cópia>
+    <id-da-principal>`, ou desfaça com `--separar <id>`. A marcação manual vale para os
+    reagrupamentos futuros. Para simular sem gravar: `run_all(dry_run=True)`.
 
 No **Histórico**, o administrador pode ligar **"Mostrar notícias sem relação com a Cordeiro"** e
 **"Mostrar notícias repetidas"**. Depois de mudar as regras ou a lista de exclusão, reclassifique:
