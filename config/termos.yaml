@@ -22,10 +22,41 @@ classificacao:
   ufs_prioritarias: [CE, PA]
   ufs_atuacao: [MA, PI, RN, PB, PE, AL, SE, BA]
   porte_relevante_milhoes: 100
+# Notícias com estas palavras (inteiras) ficam fora do Radar: na coleta nem entram; as já gravadas ficam ocultas.
 excluir_se_contiver:
+  # esporte
   - futebol
+  - golaço
+  - campeonato
+  - brasileirão
+  - libertadores
+  - jogador
+  - atacante
+  - zagueiro
+  - goleiro
+  - torcida
+  - cristiano ronaldo
+  - neymar
+  # entretenimento
   - novela
   - horóscopo
+  - reality show
+  # eleições
+  - zona eleitoral
+  - local de votação
+  # crimes e acidentes
+  - detido
+  - suspeito de
+  - homicídio
+  - assalto
+  - despiste
+  - morre em
+  - morre após
+  # listas e mercado financeiro sem obra
+  - licitações de saúde
+  - licitações de alimentação
+  - limpeza & conservação
+  - valor de mercado
 temas:
   - nome: Energia
     termos:

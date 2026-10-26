@@ -25,6 +25,7 @@ from . import config, db
 log = logging.getLogger("radar")
 
 MAX_IMAGES = 2
+REPEAT_LIMIT = 3  # imagem presente em 3+ notícias diferentes = anúncio/imagem-padrão do site
 IMG_DIR = config.BASE_DIR / "static" / "imagens"
 # Endereço RELATIVO: no Streamlit Cloud o app roda sob um subcaminho (/~/+/) e "/app/static/" (absoluto)
 # apontaria para fora dele, dando 404. Relativo funciona tanto na raiz quanto em subcaminhos.
@@ -193,10 +194,11 @@ def store_images(news_id: int, page_url: str, hints: list[str] | None = None) ->
     """Baixa até MAX_IMAGES imagens para a notícia. Retorna quantas imagens ela tem ao final."""
     with db.connect() as conn:
         have = conn.execute("SELECT position, source_url, sha1, ahash FROM news_images WHERE news_id=?", (news_id,)).fetchall()
-        # Hashes das imagens de OUTRAS notícias: imagem repetida entre notícias é anúncio ou imagem-padrão do site.
-        others = [int(r["ahash"], 16) for r in conn.execute(
-            "SELECT ahash FROM news_images WHERE news_id<>? AND ahash IS NOT NULL "
-            "UNION SELECT ahash FROM image_blocklist", (news_id,))]
+        # Imagens de OUTRAS notícias e hashes bloqueados: imagem que se repete em muitas notícias é anúncio ou
+        # imagem-padrão do site. Um jornal reaproveitar a mesma foto em 2 matérias do mesmo assunto é normal.
+        others = [(r["news_id"], int(r["ahash"], 16)) for r in conn.execute(
+            "SELECT news_id, ahash FROM news_images WHERE news_id<>? AND ahash IS NOT NULL", (news_id,))]
+        blocked = [int(r["ahash"], 16) for r in conn.execute("SELECT ahash FROM image_blocklist")]
     if len(have) >= MAX_IMAGES:
         return len(have)
     seen_src = {r["source_url"] for r in have}
@@ -222,7 +224,9 @@ def store_images(news_id: int, page_url: str, hints: list[str] | None = None) ->
             continue
         sha1 = hashlib.sha1(data).hexdigest()
         visual = _ahash(img)
-        if sha1 in seen_hash or any(_similar(visual, v) for v in seen_visual + others):
+        if sha1 in seen_hash or any(_similar(visual, v) for v in seen_visual + blocked):
+            continue
+        if len({nid for nid, v in others if _similar(visual, v)}) >= REPEAT_LIMIT - 1:  # seria a 3ª notícia
             continue
         position = min(set(range(1, MAX_IMAGES + 1)) - {r["position"] for r in have} - used)
         used.add(position)
@@ -258,15 +262,15 @@ def store_many(jobs: list[tuple[int, str, list[str]]], workers: int = 6) -> int:
 
 
 def purge_repeated() -> int:
-    """Remove imagens visualmente iguais em notícias diferentes (anúncio/imagem-padrão) e bloqueia o hash."""
+    """Remove imagens visualmente iguais em REPEAT_LIMIT ou mais notícias (anúncio/imagem-padrão) e bloqueia o hash."""
     with db.connect() as conn:
         rows = conn.execute("SELECT news_id, position, file, ahash FROM news_images WHERE ahash IS NOT NULL").fetchall()
         hashes = [(r, int(r["ahash"], 16)) for r in rows]
         bad = set()
-        for i, (a, ha) in enumerate(hashes):
-            for b, hb in hashes[i + 1:]:
-                if a["news_id"] != b["news_id"] and _similar(ha, hb):
-                    bad.update({(a["news_id"], a["position"]), (b["news_id"], b["position"])})
+        for a, ha in hashes:
+            same = {b["news_id"] for b, hb in hashes if _similar(ha, hb)}  # notícias com essa mesma imagem
+            if len(same) >= REPEAT_LIMIT:
+                bad.add((a["news_id"], a["position"]))
         now = config.now().isoformat(timespec="seconds")
         for r, _ in hashes:
             if (r["news_id"], r["position"]) in bad:

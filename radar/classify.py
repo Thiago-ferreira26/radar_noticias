@@ -56,11 +56,11 @@ CRANE_KW = ["obra", "constru", "implant", "instala", "fabrica", "usina", "parque
             "laminadora", "rodoviari", "ferroviari", "arrendamento"]
 # Conteúdo sem obra (regulatório, macro, mercado financeiro).
 LOW_KW = ["regulament", "resolucao", "aneel aprova reajuste", "tarifa", "bolsa de valores", "dividendos",
-          "cotacao", "inflacao", "selic", "opiniao", "artigo:", "podcast"]
+          "cotacao", "inflacao", "selic", "artigo de opiniao", "artigo:", "podcast"]
 PENDING_KW = ["estudo", "estuda", "avalia", "planeja", "pretende", "preve", "previsto", "consulta publica",
               "edital", "leilao", "licitac", "memorando", "protocolo de intencoes", "intencao", "proposta",
               "viabilidade", "licenca previa", "pode receber", "negocia", "em analise"]
-ONGOING_KW = ["obras em andamento", "inicio das obras", "inicia obras", "iniciou as obras", "comecam as obras",
+ONGOING_KW = ["obras em andamento", "em andamento", "rapido andamento", "inicio das obras", "inicia obras", "iniciou as obras", "comecam as obras",
               "em construcao", "canteiro", "contrato assinado", "assina contrato", "ordem de servico",
               "investimento aprovado", "aprova investimento", "decisao final de investimento", "licenca de instalacao",
               "pedra fundamental", "em implantacao", "inaugura", "contratad", "vence leilao", "arremat",
@@ -172,7 +172,31 @@ def detect_prazo(text_n: str, ongoing: bool) -> str:
     return f"Curto ({year}-{year + 1})" if ongoing else "A confirmar"
 
 
-def classify(title: str, summary: str, theme: str | None = None, cfg: dict | None = None) -> dict:
+# Fora do escopo do Radar: notícias de outros países sem obra no Brasil.
+FOREIGN_TLDS = (".pt",)  # Portugal: "Vila do Conde", "Porto" e "Bragança" trazem muitas notícias de lá
+FOREIGN_KW = ["portugal", "lisboa", "argentina", "argentino", "milei", "russia", "russo", "ucrania", "estados unidos",
+              "eua", "china", "chines", "chinesa", "europa", "europeia", "espanha", "mexico", "chile", "chileno",
+              "peru", "colombia", "india", "japao", "alemanha", "hamburgo", "franca", "reino unido", "angola",
+              "mocambique", "nord stream", "siria", "gaza", "israel", "venezuela", "venezuelana"]
+BRAZIL_KW = ["brasil", "brasileir", "governo federal", "governo lula", "lula", "bndes", "petrobras", "vale ",
+             "nordeste", "amazonia", "anp", "aneel", "antaq", "ibama"]
+
+
+def out_of_scope(title: str, summary: str, url: str | None, ufs: list[str], cfg: dict) -> str | None:
+    """Motivo para a notícia ficar fora do Radar (sem relação com a Cordeiro), ou None."""
+    host = (url or "").split("/")[2] if (url or "").count("/") >= 2 else ""
+    if host.endswith(FOREIGN_TLDS):
+        return "Notícia de site estrangeiro, sem obra no Brasil"
+    if word := excluded_word(title, summary, cfg):
+        return f"Tema fora do escopo do Radar ({word})"
+    title_n, text_n = norm(title), norm(f"{title} {summary}")
+    if ufs == ["BR"] and _has(title_n, FOREIGN_KW) and not _has(text_n, BRAZIL_KW):
+        return "Notícia sobre outro país, sem obra no Brasil"
+    return None
+
+
+def classify(title: str, summary: str, theme: str | None = None, cfg: dict | None = None,
+             url: str | None = None) -> dict:
     cfg = cfg or config.load_config()
     rules = cfg["classificacao"]
     prio = set(rules.get("ufs_prioritarias", []))
@@ -190,9 +214,10 @@ def classify(title: str, summary: str, theme: str | None = None, cfg: dict | Non
     # Setores pesados já indicam içamento por si; Industrial/Infra precisam de uma palavra de obra.
     heavy = category in STRONG_CATEGORIES and _has(text_n, CATEGORY_KW[category])
     crane = (heavy or _has(text_n, CRANE_KW)) and not (_has(text_n, LOW_KW) and not ongoing)
+    scope = out_of_scope(title or "", summary or "", url, ufs, cfg)
 
     # Regras na ordem dos critérios da newsletter — a primeira que se encaixa define o teto.
-    if not crane:
+    if scope or not crane:
         potential = "Baixo"
     elif ufs == ["BR"] or not any(u in area for u in ufs):
         potential = "Médio"
@@ -224,8 +249,12 @@ def classify(title: str, summary: str, theme: str | None = None, cfg: dict | Non
     else:
         signal = "Sinal de mercado"
 
-    impacto = NEED_BY_CATEGORY[category] if potential != "Baixo" else (
-        "Sem relação prática identificada com içamento ou movimentação de carga pesada.")
+    if scope:
+        impacto = f"{scope}: sem relação com a Cordeiro."
+    elif potential != "Baixo":
+        impacto = NEED_BY_CATEGORY[category]
+    else:
+        impacto = "Sem relação prática identificada com içamento ou movimentação de carga pesada."
     extras = []
     if value:
         if value >= 1000:
@@ -260,6 +289,15 @@ def has_relation(demand) -> bool:
     return (demand or "") != NO_RELATION_DEMAND
 
 
-def is_excluded(title: str, summary: str, cfg: dict) -> bool:
+def excluded_word(title: str, summary: str, cfg: dict) -> str | None:
+    """Primeira palavra/expressão de excluir_se_contiver presente (palavra inteira: "gol" não casa "golfo")."""
     text_n = norm(f"{title} {summary}")
-    return any(norm(w).strip() in text_n for w in cfg.get("excluir_se_contiver", []) or [] if w)
+    for w in cfg.get("excluir_se_contiver", []) or []:
+        k = norm(str(w)).strip()
+        if k and re.search(rf"(?<![a-z0-9]){re.escape(k)}(?![a-z0-9])", text_n):
+            return str(w)
+    return None
+
+
+def is_excluded(title: str, summary: str, cfg: dict) -> bool:
+    return excluded_word(title, summary, cfg) is not None

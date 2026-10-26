@@ -11,7 +11,7 @@ import pandas as pd
 import streamlit as st
 
 from radar import auth, config, crm, db, dossier, export, images, ui
-from radar.collector import run_collection
+from radar.collector import add_from_url, run_collection
 from radar.classify import CATEGORIES, has_relation
 
 st.set_page_config(page_title="Radar Cordeiro", page_icon="📡", layout="wide")
@@ -40,6 +40,7 @@ def load_news() -> pd.DataFrame:
     df["sort_date"] = df["published_at"].fillna(df["collected_at"])
     df["uf_list"] = df["ufs"].fillna("").str.split(",")
     df["relevante"] = df["demand"].map(has_relation).astype(bool)
+    df["repetida"] = df["duplicate_of"].notna() if "duplicate_of" in df else False  # mesma notícia em outro site
     df["lead_im"] = [ui.im_code(r) for r in df.to_dict("records")]
     # Ficha do executivo: pesquisada (importada da newsletter) ou preliminar gerada pelo roteiro padrão.
     researched = dossier.get_dossiers()
@@ -79,6 +80,7 @@ def refresh() -> None:
 
 
 CARDS_PER_ROW = 3
+DAY_LIMIT = 12  # cards por tema na Visão do dia antes do botão "Mostrar todas"
 
 
 def crm_button(r: dict, key: str, sent: dict | None) -> None:
@@ -230,8 +232,9 @@ def newsletter_filters(df: pd.DataFrame, key: str) -> pd.DataFrame:
 # ------------------------------------------------------------------ cabeçalho
 all_news = load_news()
 # Notícias sem relação com a Cordeiro (demanda "Não") ficam fora das telas; o Histórico do admin pode mostrá-las.
-news = all_news[all_news["relevante"]]
+news = all_news[all_news["relevante"] & ~all_news["repetida"]]
 n_sem_relacao = int((~all_news["relevante"]).sum()) if len(all_news) else 0
+n_repetidas = int((all_news["relevante"] & all_news["repetida"]).sum()) if len(all_news) else 0
 runs = load_runs()
 today_key = config.today().isoformat()
 cfg = config.load_config()
@@ -288,7 +291,13 @@ with tab_day:
             if group.empty:
                 continue
             html(ui.section_title(cat, len(group), ui.CAT_COLORS.get(cat)))
-            render_cards(group, new_day=day, key="day")
+            # Página leve: as principais de cada tema (já ordenadas por potencial) e o resto sob demanda.
+            show_all = st.session_state.get(f"day_all_{cat}", False)
+            render_cards(group if show_all else group.head(DAY_LIMIT), new_day=day, key="day")
+            if len(group) > DAY_LIMIT:
+                label = "Mostrar menos" if show_all else f"Mostrar todas as {len(group)} notícias de {cat}"
+                st.button(label, key=f"day_more_{cat}", type="tertiary",
+                          on_click=lambda k=f"day_all_{cat}": st.session_state.update({k: not st.session_state.get(k, False)}))
 
 if not is_admin:  # visão do executivo termina aqui
     html(ui.footer(f"Última atualização: {last_update} · Fuso {config.TZ.key}"))
@@ -318,7 +327,14 @@ with tab_hist:
         mostrar_irrelevantes = st.toggle(
             f"Mostrar notícias sem relação com a Cordeiro ({n_sem_relacao})", value=False, key="hist_irrelevantes",
             help="Demanda de guindaste/área = Não. Ficam fora da Visão do dia e do Modo TV.")
-        base = all_news if mostrar_irrelevantes else news
+        mostrar_repetidas = st.toggle(
+            f"Mostrar notícias repetidas ({n_repetidas})", value=False, key="hist_repetidas",
+            help="A mesma matéria publicada por outros sites. Aparece só uma vez na Visão do dia e no Modo TV.")
+        base = all_news
+        if not mostrar_irrelevantes:
+            base = base[base["relevante"]]
+        if not mostrar_repetidas:
+            base = base[~base["repetida"]]
         if isinstance(period, (tuple, list)) and len(period) == 2:
             start, end = (d.isoformat() for d in period)
             dates = base[col].fillna("").str[:10]
@@ -402,6 +418,26 @@ with tab_run:
         if res := st.session_state.pop("last_result", None):
             kind = {"ok": st.success, "com_erros": st.warning, "ignorada": st.info}.get(res["status"], st.error)
             kind(f"Coleta {res['status']}: {res['message']} Exa usado nesta execução: {res.get('exa_used', 0)}.")
+
+        st.markdown("**Incluir notícia por link**")
+        st.caption("Cole o link de uma matéria (ex.: recebida por WhatsApp). O painel lê título, resumo e data "
+                   "da página, classifica e baixa as imagens.")
+        with st.form("add_link", clear_on_submit=True, border=False):
+            c_url, c_btn = st.columns([5, 1], vertical_alignment="bottom")
+            link = c_url.text_input("Link da notícia", placeholder="https://…", label_visibility="collapsed")
+            enviar = c_btn.form_submit_button("Incluir", type="primary", width="stretch")
+        if enviar and link.strip():
+            with st.spinner("Lendo a página e classificando…"):
+                res = add_from_url(link.strip())
+            if not res["ok"]:
+                st.error(res["message"])
+            elif not res["nova"]:
+                st.info(res["message"])
+            else:
+                refresh()
+                visivel = "" if res["demand"] != "Não" else " Ela ficou como sem relação com a Cordeiro (oculta)."
+                st.success(f"{res['message']} — potencial {res['potential']}, demanda {res['demand']}, "
+                           f"{res['images']} imagem(ns).{visivel}")
 
         n_sem_img = int((news["images"].str.len() == 0).sum()) if len(news) else 0
         if st.button(f"Buscar imagens que faltam ({n_sem_img} notícias sem imagem)", disabled=not n_sem_img):

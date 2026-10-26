@@ -24,7 +24,8 @@ def build_deck(max_ops: int | None = None) -> dict:
     db.init_db()
     with db.connect() as conn:
         rows = [dict(r) for r in conn.execute("SELECT * FROM news").fetchall()]
-        rows = [r for r in rows if has_relation(r.get("demand"))]  # sem relação com a Cordeiro: fora da TV
+        # sem relação com a Cordeiro e repetidas (mesma notícia em outro site): fora da TV
+        rows = [r for r in rows if has_relation(r.get("demand")) and r.get("duplicate_of") is None]
         last = conn.execute("SELECT finished_at FROM runs WHERE finished_at IS NOT NULL ORDER BY id DESC LIMIT 1").fetchone()
     new_since = (config.today() - timedelta(days=NEW_DAYS)).isoformat()
     for r in rows:

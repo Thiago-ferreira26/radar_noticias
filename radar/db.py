@@ -180,7 +180,8 @@ def _ts() -> str:
 EXTRA_COLUMNS = [("news", "manual_class", "INTEGER DEFAULT 0"),  # 1 = classificação do analista (newsletter)
                  ("news_images", "ahash", "TEXT"), ("news_images", "kind", "TEXT"),
                  ("runs", "firecrawl_used", "INTEGER DEFAULT 0"),
-                 ("crm_leads", "obra_cod", "TEXT")]  # lead criado a partir de uma obra do Mapa de Obras
+                 ("crm_leads", "obra_cod", "TEXT"),  # lead criado a partir de uma obra do Mapa de Obras
+                 ("news", "duplicate_of", "INTEGER")]  # id da notícia principal, se for repetida (dedupe.py)
 # Ordem de cópia/criação respeitando as chaves estrangeiras.
 TABLES = ["runs", "searches", "news", "dossiers", "accounts", "exa_usage", "api_usage", "news_images",
           "image_blocklist", "crm_leads", "obras", "obras_imports", "errors"]

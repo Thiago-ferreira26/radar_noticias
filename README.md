@@ -84,16 +84,45 @@ fica bloqueado por 5 minutos naquela sessão.
 Usuário e senha ficam em `ADMIN_USER` e `ADMIN_PASSWORD`, no `.env` ou nos Secrets do Streamlit
 Cloud, e nunca no código. Sem essas variáveis, ninguém consegue entrar como administrador.
 
-### Notícias sem relação com a Cordeiro
+### Incluir notícia por link
 
-Notícias com **demanda de guindaste/área = "Não"** não aparecem na Visão do dia, no Modo TV, nos
-indicadores do topo nem nas exportações. Na maioria, a classificação automática não achou relação
-com içamento ou carga pesada ("Sem relação prática identificada…"); algumas são fichas em que o
-analista marcou "Não".
+Na aba **Coleta e logs** (administrador), cole o link de uma matéria, por exemplo uma recebida por
+WhatsApp, e clique em **Incluir**. O painel lê da própria página o título, o resumo, o texto e a
+data de publicação; classifica com as mesmas regras da coleta, usando o texto completo; grava sem
+duplicar (pela URL) e baixa até 2 imagens. A notícia aparece com mecanismo "manual" e não é
+reclassificada depois. Pela linha de comando:
 
-Elas continuam no banco, para não voltarem como "novas" na próxima coleta e para a regra poder ser
-revista. O administrador as vê no **Histórico**, ligando **"Mostrar notícias sem relação com a
-Cordeiro"**. Elas também não recebem imagens.
+```bash
+.venv\Scripts\python.exe -c "from radar.collector import add_from_url; print(add_from_url('https://...'))"
+```
+
+### Notícias sem relação, fora do escopo e repetidas
+
+Ficam fora da Visão do dia, do Modo TV, dos indicadores e das exportações, mas continuam no banco:
+
+- **Sem relação com a Cordeiro:** demanda de guindaste/área = "Não". A classificação automática não
+  achou relação com içamento ou carga pesada, ou o analista marcou "Não".
+- **Fora do escopo:** viram demanda "Não", com o motivo escrito no quadro de impacto.
+  - **Sites de Portugal** (`.pt`). O termo "Porto de Vila do Conde" traz muitas notícias da cidade
+    portuguesa.
+  - **Notícias sobre outro país** sem estado brasileiro nem menção ao Brasil.
+  - Notícias com as palavras de `excluir_se_contiver` no `config/termos.yaml`: futebol, eleições,
+    crimes e acidentes, listas genéricas de licitação, "valor de mercado"… A comparação é por
+    palavra inteira. Na coleta, essas notícias nem entram.
+- **Repetidas:** a mesma matéria publicada por vários sites (`radar/dedupe.py`) aparece **uma vez**.
+  - **Quando conta como repetida:** títulos quase idênticos, ou muito parecidos e sem números
+    conflitantes, publicados com até 30 dias de diferença.
+  - **Qual fica visível:** a ficha pesquisada ou incluída à mão, depois Exa, Firecrawl e
+    DuckDuckGo, e por fim a mais antiga. As outras ficam com `duplicate_of`.
+  - **Quando roda:** o agrupamento é refeito a cada coleta e a cada inclusão por link, e as cópias
+    não baixam imagem.
+
+No **Histórico**, o administrador pode ligar **"Mostrar notícias sem relação com a Cordeiro"** e
+**"Mostrar notícias repetidas"**. Depois de mudar as regras ou a lista de exclusão, reclassifique:
+`python -m radar.collector --reclassificar`.
+
+A **Visão do dia** mostra as **12 principais de cada tema** (por potencial), com o botão
+**"Mostrar todas"**. Isso deixa a página leve mesmo em dias com centenas de notícias.
 
 ### Barra de filtros
 

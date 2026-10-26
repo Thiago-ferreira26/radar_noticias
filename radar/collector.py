@@ -12,7 +12,7 @@ import time
 import traceback
 from logging.handlers import RotatingFileHandler
 
-from . import classify, config, db, engines, images
+from . import classify, config, db, dedupe, engines, images
 
 log = logging.getLogger("radar")
 
@@ -60,7 +60,7 @@ def _store_results(results, term, engine, run_id, cfg, image_jobs: list) -> int:
             "collected_at": ts.isoformat(timespec="seconds"),
             "collected_day": ts.date().isoformat(),
             "run_id": run_id,
-            **classify.classify(r["title"], r["summary"], term["tema"], cfg),
+            **classify.classify(r["title"], r["summary"], term["tema"], cfg, url=r["url"]),
         }
         if db.insert_news(item):
             new += 1
@@ -173,6 +173,16 @@ def run_collection(trigger: str = "manual", progress=None) -> dict:
                 db.log_search(run_id, "duckduckgo", term["texto"], term["tema"], status="erro",
                               error=fail("duckduckgo", term["texto"], exc))
 
+        # ---------------- Repetidas: agrupa a mesma notícia publicada por vários sites
+        try:
+            dd = dedupe.run_all()
+            log.info("Repetidas: %(repetidas)s notícias em %(grupos)s grupos.", dd)
+        except Exception as exc:  # não derruba a coleta
+            fail("dedupe", "-", exc)
+        with db.connect() as conn:
+            dups = {r["id"] for r in conn.execute("SELECT id FROM news WHERE duplicate_of IS NOT NULL")}
+        image_jobs = [j for j in image_jobs if j[0] not in dups]  # cópia não precisa de imagem
+
         # ---------------- Imagens (até 2 por notícia nova), em paralelo no fim da coleta
         n_images = 0
         if image_jobs:
@@ -199,12 +209,80 @@ def reclassify_all() -> int:
     fields = ("category", "vertical", "ufs", "potential", "demand", "prazo", "signal_type", "impacto")
     with db.connect() as conn:
         # Notícias classificadas pelo analista (importadas da newsletter) não são sobrescritas.
-        rows = conn.execute("SELECT id, title, summary, theme FROM news WHERE COALESCE(manual_class, 0) = 0").fetchall()
+        rows = conn.execute(
+            "SELECT id, url, title, summary, theme FROM news WHERE COALESCE(manual_class, 0) = 0").fetchall()
         for r in rows:
-            c = classify.classify(r["title"], r["summary"], r["theme"], cfg)
+            c = classify.classify(r["title"], r["summary"], r["theme"], cfg, url=r["url"])
             conn.execute(f"UPDATE news SET {', '.join(f + '=?' for f in fields)} WHERE id=?",
                          (*(c[f] for f in fields), r["id"]))
     return len(rows)
+
+
+def add_from_url(url: str, theme: str | None = None) -> dict:
+    """Inclui manualmente uma notícia a partir do link (ex.: matéria recebida por WhatsApp).
+
+    Lê título, resumo e data da própria página, classifica com as mesmas regras da coleta, grava
+    (sem duplicar, pela URL) e baixa até 2 imagens. Retorna {"ok", "nova", "id", "title", "message"}.
+    """
+    import re
+    from html import unescape
+
+    import requests
+
+    db.init_db()
+    norm_url = engines.normalize_url(url)
+    if existing := db.news_id(norm_url):
+        return {"ok": True, "nova": False, "id": existing, "message": "Esta notícia já está no painel."}
+    try:
+        resp = requests.get(url, headers=images.HEADERS, timeout=25)
+        resp.raise_for_status()
+    except requests.RequestException as exc:
+        return {"ok": False, "nova": False, "message": f"Não foi possível abrir o link: {exc}"}
+    html = resp.text
+
+    def meta(*names):
+        for n in names:
+            pat = re.escape(n)
+            m = (re.search(rf'<meta[^>]+(?:property|name)=["\']{pat}["\'][^>]*content=["\']([^"\']+)', html, re.I)
+                 or re.search(rf'<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:property|name)=["\']{pat}["\']', html, re.I))
+            if m:
+                return unescape(m.group(1)).strip()
+        return None
+
+    site = meta("og:site_name") or engines.source_from_url(norm_url)
+    title = meta("og:title", "twitter:title") or (re.search(r"<title>(.*?)</title>", html, re.S | re.I) or [None, url])[1]
+    title = re.sub(r"\s+", " ", unescape(title)).strip()
+    # tira o nome do site/colunista do fim do título ("… - Egídio Serpa - Diário do Nordeste")
+    parts = [p.strip() for p in re.split(r"\s+[-|–]\s+", title)]
+    if len(parts) > 1 and site and parts[-1].lower() == site.lower():
+        title = parts[0]
+    description = meta("og:description", "description", "twitter:description") or ""
+    # texto da matéria a partir do resumo, para um resumo mais completo e uma classificação melhor
+    text = re.sub(r"\s+", " ", unescape(re.sub(r"<[^>]+>", " ", re.sub(r"<script[\s\S]*?</script>|<style[\s\S]*?</style>", " ", html))))
+    start = text.find(description[:60]) if description else -1
+    body = text[start:start + 3000] if start >= 0 else description  # mais texto: valores e fase da obra
+    summary = engines._clean(body or description, 520)
+    published = engines.to_local_iso(meta("article:published_time", "og:published_time", "datePublished")
+                                     or (re.search(r'"datePublished"\s*:\s*"([^"]+)"', html) or [None, None])[1])
+
+    cfg = config.load_config()
+    ts = config.now()
+    item = {
+        "url": norm_url, "title": title[:300], "source": engines.source_from_url(norm_url) if site is None else site,
+        "published_at": published, "summary": summary, "term": "Inclusão manual", "theme": theme,
+        "engine": "manual", "collected_at": ts.isoformat(timespec="seconds"), "collected_day": ts.date().isoformat(),
+        "run_id": None, **classify.classify(title, body or summary, theme, cfg, url=norm_url),
+    }
+    db.insert_news(item)
+    news_id = db.news_id(norm_url)
+    with db.connect() as conn:  # classificada com o texto completo: reclassificações não sobrescrevem
+        conn.execute("UPDATE news SET manual_class=1 WHERE id=?", (news_id,))
+    dedupe.run_all()  # a incluída manualmente vira a principal se já houver a mesma notícia de outro site
+    n_img = images.store_images(news_id, url, [meta("og:image")]) if classify.has_relation(item["demand"]) else 0
+    log.info("Notícia incluída manualmente: #%s %s (%s imagens)", news_id, title, n_img)
+    return {"ok": True, "nova": True, "id": news_id, "title": title, "images": n_img,
+            "potential": item["potential"], "demand": item["demand"], "category": item["category"],
+            "message": f"Notícia incluída: {title}"}
 
 
 def update_obras(origem: str = "agendado") -> None:
