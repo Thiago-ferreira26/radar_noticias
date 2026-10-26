@@ -20,7 +20,7 @@
   --amber:#C97418; --amber-soft:#F8E7D2; --terracotta:#B24B2E; --terracotta-soft:#F5DED4;
   --good:#2E7D5B; --good-soft:#DBEEE3;
   --land:#E3ECEA; --land-stroke:#FFFFFF; --sea:#EEF4F3;
-  --s-eol:#00897E; --s-min:#B24B2E; --s-dc:#3F64B0; --s-inf:#C97418;
+  --s-eol:#00897E; --s-min:#B24B2E; --s-dc:#3F64B0; --s-inf:#C97418; --s-top:#7B4FA6; --s-top-soft:#ECE2F6;
   --s-eol-soft:#D3F0EC; --s-min-soft:#F5DED4; --s-dc-soft:#DDE5F6; --s-inf-soft:#F8E7D2;
   --shadow:0 1px 2px rgba(15,40,38,.06),0 8px 24px -12px rgba(15,40,38,.18);
   --radius-lg:16px; --radius-md:10px; --radius-sm:6px;
@@ -37,7 +37,7 @@
     --amber:#E9A24C; --amber-soft:#3B2C17; --terracotta:#E28468; --terracotta-soft:#3D2620;
     --good:#67C79A; --good-soft:#1B3A2C;
     --land:#1C3533; --land-stroke:#0D1B1B; --sea:#10211F;
-    --s-eol:#2FD3C0; --s-min:#E8866A; --s-dc:#86A7F0; --s-inf:#E9A24C;
+    --s-eol:#2FD3C0; --s-min:#E8866A; --s-dc:#86A7F0; --s-inf:#E9A24C; --s-top:#C4A0EA; --s-top-soft:#2E2340;
     --s-eol-soft:#123F3A; --s-min-soft:#3D2620; --s-dc-soft:#1D2A47; --s-inf-soft:#3B2C17;
     --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 28px -14px rgba(0,0,0,.5);
     --grid-line-2:rgba(47,224,204,.22);
@@ -51,7 +51,7 @@
   --amber:#E9A24C; --amber-soft:#3B2C17; --terracotta:#E28468; --terracotta-soft:#3D2620;
   --good:#67C79A; --good-soft:#1B3A2C;
   --land:#1C3533; --land-stroke:#0D1B1B; --sea:#10211F;
-  --s-eol:#2FD3C0; --s-min:#E8866A; --s-dc:#86A7F0; --s-inf:#E9A24C;
+  --s-eol:#2FD3C0; --s-min:#E8866A; --s-dc:#86A7F0; --s-inf:#E9A24C; --s-top:#C4A0EA; --s-top-soft:#2E2340;
   --s-eol-soft:#123F3A; --s-min-soft:#3D2620; --s-dc-soft:#1D2A47; --s-inf-soft:#3B2C17;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 28px -14px rgba(0,0,0,.5);
   --grid-line-2:rgba(47,224,204,.22);
@@ -199,8 +199,8 @@ footer{font-size:12px;color:var(--text-mut);border-top:1px solid var(--border);p
   <header class="top">
     <div style="min-width:0;flex:1 1 520px">
       <div class="kicker">Grupo Cordeiro · Pipeline de obras</div>
-      <h1>Mapa de Obras · Eólico, Mineração e Infraestrutura</h1>
-      <p class="sub">Obras cadastradas no Obras Online e reunidas nas apresentações de eólico, mineração e infraestrutura (data centers e obras de infraestrutura). Filtre pela previsão de término da fase atual e pela previsão de entrega para priorizar abordagens comerciais de locação de guindastes e área.</p>
+      <h1>Mapa de Obras · Eólico, Mineração, Infraestrutura e Top 30</h1>
+      <p class="sub">Obras cadastradas no Obras Online e reunidas nas apresentações de eólico, mineração, infraestrutura (data centers e obras de infraestrutura) e Projetos Top 30 (Vale, Eneva e Omnia DC). Filtre pela previsão de término da fase atual e pela previsão de entrega para priorizar abordagens comerciais de locação de guindastes e área.</p>
     </div>
     <button class="themebtn" id="themeBtn" type="button">Alternar tema</button>
   </header>
@@ -307,11 +307,12 @@ const SETORES = [
   {k:'Eólico', c:'--s-eol', s:'--s-eol-soft'},
   {k:'Mineração', c:'--s-min', s:'--s-min-soft'},
   {k:'Data Center', c:'--s-dc', s:'--s-dc-soft'},
-  {k:'Infraestrutura', c:'--s-inf', s:'--s-inf-soft'}
+  {k:'Infraestrutura', c:'--s-inf', s:'--s-inf-soft'},
+  {k:'Top 30', c:'--s-top', s:'--s-top-soft'}
 ];
 const SC = Object.fromEntries(SETORES.map(s=>[s.k,s]));
 const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-const UFN = Object.fromEntries(Object.entries(DB.states).map(([k,v])=>[k,v.name]));
+const UFN = Object.fromEntries(Object.entries(DB.states).map(([k,v])=>[k,v.name])); UFN.ND='UF não definida';
 const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const norm = s => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 
@@ -414,7 +415,7 @@ Object.entries(DB.states).forEach(([uf,s])=>{
 const LBL_ADJ={DF:[0,-10],SE:[8,4],AL:[10,2],PB:[16,0],RN:[6,-4],PE:[0,4],ES:[8,0],RJ:[4,6],SC:[0,0]};
 // posições com espalhamento para obras no mesmo município
 const groups={};
-DB.obras.forEach(o=>{const k=o.x.toFixed(0)+','+o.y.toFixed(0);(groups[k]=groups[k]||[]).push(o)});
+DB.obras.filter(o=>o.x!==null).forEach(o=>{const k=o.x.toFixed(0)+','+o.y.toFixed(0);(groups[k]=groups[k]||[]).push(o)});
 Object.values(groups).forEach(g=>g.forEach((o,i)=>{o.gi=i;o.gn=g.length}));
 function pinPos(o,r){
   if(o.gn===1)return [o.x,o.y];
@@ -440,7 +441,7 @@ function renderMap(){
   const r=7.5*k;
   gPins.innerHTML='';
   // obras fora do filtro não aparecem; ordem: maiores grupos por baixo
-  list.forEach(o=>{
+  list.filter(o=>o.x!==null).forEach(o=>{
     const [x,y]=pinPos(o,r);
     const c=document.createElementNS(NS,'circle');
     c.setAttribute('cx',x.toFixed(2));c.setAttribute('cy',y.toFixed(2));c.setAttribute('r',r.toFixed(2));
@@ -544,7 +545,7 @@ function card(o){
     <div class="ctop"><span class="tag">${esc(o.setor)}</span><span class="cod">cód. ${o.cod}</span></div>
     <div>
       <h3 class="ctitle">${esc(o.tipo)}</h3>
-      <div class="cloc">${esc(o.cidade)} / ${o.uf} · ${esc(UFN[o.uf])}${o.geoAprox?' <span class="mut">(município não localizado no mapa)</span>':''}</div>
+      <div class="cloc">${esc(o.cidade)} / ${o.uf} · ${esc(UFN[o.uf])}${o.x===null?' <span class="mut">(sem local definido, fora do mapa)</span>':o.geoAprox?' <span class="mut">(município não localizado no mapa)</span>':''}</div>
       <div class="masked" title="Nome da obra como aparece (mascarado) na fonte">${esc(o.nome)}</div>
     </div>
     <div class="pills"><span class="pill wait">${o.status==='Obra em Construção'?'Em construção':'Não iniciada'}</span><span class="pill hot" title="Etapa atual: a prev. término fase se refere a ela">${esc(o.faseCurta)}</span><span class="pill">${esc(o.espec)}</span></div>
@@ -600,7 +601,7 @@ document.getElementById('themeBtn').addEventListener('click',()=>{
   r.dataset.theme=cur==='dark'?'light':'dark';
 });
 const lastAtu=DB.obras.map(o=>o.dAtu).filter(Boolean).sort((a,b)=>b-a)[0];
-document.getElementById('foot').innerHTML=`Fonte: Obras Online, fichas compiladas nas apresentações “Eólico”, “Mineração” e “Infraestrutura” (data centers e infraestrutura). Atualização mais recente nas fichas: ${lastAtu.toLocaleDateString('pt-BR')}. Nomes de obras e contatos aparecem mascarados como na fonte. Valores são os informados no cadastro e representam escopos distintos; a soma serve só como ordem de grandeza. Prazos “em X dias” contados a partir de ${TODAY.toLocaleDateString('pt-BR')}.`;
+document.getElementById('foot').innerHTML=`Fonte: Obras Online, fichas compiladas nas apresentações “Eólico”, “Mineração”, “Infraestrutura” (data centers e infraestrutura) e “Projetos Top 30 Vale” (Vale, Eneva e Omnia DC). Atualização mais recente nas fichas: ${lastAtu.toLocaleDateString('pt-BR')}. Nomes de obras e contatos aparecem mascarados como na fonte. Valores são os informados no cadastro e representam escopos distintos; a soma serve só como ordem de grandeza. Prazos “em X dias” contados a partir de ${TODAY.toLocaleDateString('pt-BR')}.`;
 update();
 </script>
 

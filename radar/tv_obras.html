@@ -141,7 +141,8 @@
     border-radius:calc(var(--u)*1); padding:calc(var(--u)*0.8);}
   .cover-grid .panels{display:flex; flex-direction:column; gap:calc(var(--u)*1.4); min-height:0;}
   .cover-grid .ufs .barrow{grid-template-columns:calc(var(--u)*8) 1fr calc(var(--u)*2.6);}
-  .cover-grid .barrow{margin-bottom:calc(var(--u)*0.6);}
+  .cover-grid .barrow{margin-bottom:calc(var(--u)*0.35);}
+  .cover-grid .panel h3{margin-bottom:calc(var(--u)*0.7);}
   .ob .body{grid-template-columns:1fr 1.25fr;}
   .ob .mapbox{min-height:0; position:relative; background:rgba(238,244,242,.03); border:1px solid rgba(238,244,242,.1);
     border-radius:calc(var(--u)*1); padding:calc(var(--u)*0.6); display:flex; flex-direction:column;}
@@ -272,7 +273,8 @@ __NO_TRANSLATE__
       '<h2>'+esc(d.tipo)+' · '+esc(d.cidade)+'/'+esc(d.uf)+'</h2>'+
       '<div class="nome">'+esc(d.nome)+'</div>'+
       '<div class="body"><div class="mapbox"><div class="where">'+esc(d.cidade)+' · '+esc(d.ufNome)+
-        (d.geoAprox ? '<small>município não localizado: ponto no centro do estado</small>' : '')+'</div>'+mapSVG(d, d.uf)+'</div>'+
+        (d.x == null ? '<small>sem local definido na fonte: fora do mapa</small>' :
+          d.geoAprox ? '<small>município não localizado: ponto no centro do estado</small>' : '')+'</div>'+mapSVG(d, d.uf)+'</div>'+
         '<div class="text">'+
           '<div class="dates"><div class="key"><span>Término da fase</span><b>'+esc(d.pfase)+'</b>'+due(d)+'</div>'+
           '<div class="key"><span>Entrega da obra</span><b>'+esc(d.pent === "-" ? "—" : d.pent)+'</b></div>'+

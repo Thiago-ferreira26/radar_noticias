@@ -21,7 +21,9 @@ from . import config, db
 MAP_PATH = Path(__file__).resolve().parent / "brasil_mapa.json"
 PANEL_TEMPLATE = Path(__file__).resolve().parent / "obras.html"
 NEW_DAYS = 7
-SETORES = {"Eólico": "#00897E", "Mineração": "#B24B2E", "Data Center": "#3F64B0", "Infraestrutura": "#C97418"}
+SETORES = {"Eólico": "#00897E", "Mineração": "#B24B2E", "Data Center": "#3F64B0", "Infraestrutura": "#C97418",
+           "Top 30": "#7B4FA6"}
+UF_ND = "UF não definida"  # obras sem local definido na fonte (uf "ND", fora do mapa)
 EM_CONSTRUCAO = "Obra em Construção"
 MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
 DB_RE = re.compile(r"const\s+DB\s*=\s*(\{.*?\});?\s*$", re.M)
@@ -113,16 +115,20 @@ def auto_import(origem: str = "agendado") -> dict | None:
         return None
     files = sorted((p for p in Path(folder).glob("*.htm*") if "obra" in p.name.lower()),
                    key=lambda p: p.stat().st_mtime, reverse=True)
-    if not files:
+    # A pasta pode ter outros painéis com "obras" no nome: vale o mais recente que tenha o bloco const DB.
+    for path in files:
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if DB_RE.search(text):
+            break
+    else:
         return None
-    text = files[0].read_text(encoding="utf-8")
     last = last_import()
     if last and last["sha1"] == hashlib.sha1(text.encode("utf-8")).hexdigest():
         return {"total": last["n_total"], "novas": 0, "atualizadas": 0, "removidas": 0, "sem_mudanca": True}
     try:
-        return import_obras(text, origem, files[0].name)
+        return import_obras(text, origem, path.name)
     except ValueError as exc:
-        db.log_error(None, f"Obras: {exc}", engine="obras", term=files[0].name)
+        db.log_error(None, f"Obras: {exc}", engine="obras", term=path.name)
         return None
 
 
@@ -185,7 +191,7 @@ def build_tv_deck(max_obras: int | None = None) -> dict:
         obras = obras[:max_obras]
     last = last_import()
     atus = [d for d in (parse_dmy(o.get("atu")) for o in obras) if d]
-    ufs = Counter(o["uf"] for o in obras)
+    ufs = Counter(o["uf"] for o in obras if o["uf"] != "ND")
     cover = {
         "total": len(obras),
         "build": sum(o.get("status") == EM_CONSTRUCAO for o in obras),
@@ -199,7 +205,7 @@ def build_tv_deck(max_obras: int | None = None) -> dict:
     slides = [{
         "im": o["im"], "cod": o["cod"], "setor": o.get("setor") or "", "setorColor": SETORES.get(o.get("setor"), "#4a6a86"),
         "tipo": o.get("tipo") or "", "nome": o.get("nome") or "", "cidade": o.get("cidade") or "", "uf": o.get("uf") or "",
-        "ufNome": UF_LABEL.get(o.get("uf"), o.get("uf")), "status": o.get("status") or "", "fase": o["faseCurta"],
+        "ufNome": UF_ND if o.get("uf") == "ND" else UF_LABEL.get(o.get("uf"), o.get("uf")), "status": o.get("status") or "", "fase": o["faseCurta"],
         "pfase": o.get("pfase") or "—", "pent": o.get("pent") or "—", "atu": o.get("atu") or "—",
         "daysTerm": o["daysTerm"], "subsetor": o.get("subsetor") or "", "espec": o.get("espec") or "",
         "invest": o.get("invest") or "", "valor": o.get("valor") or "-", "obs": o.get("obs") or "",

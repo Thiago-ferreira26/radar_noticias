@@ -218,7 +218,7 @@ No Streamlit Community Cloud, ele é um segundo app do mesmo repositório: *Crea
   e da TV, mas continuam no banco. Há três formas:
   1. **Automática:** defina `OBRAS_PASTA` no `.env` com a pasta onde fica o `mapa_obras_cordeiro-PAINEL.html`.
      A coleta diária (Agendador do Windows ou `scheduler.py`) importa o HTML de obras mais recente da
-     pasta, só quando ele mudou. Basta salvar a versão nova do arquivo na pasta.
+     pasta que tenha os dados do mapa (outros painéis na pasta são ignorados), só quando ele mudou. Basta salvar a versão nova do arquivo na pasta.
   2. **Pelo painel:** o administrador envia o arquivo no fim da página inicial do Mapa de Obras (ou clica em
      "Importar agora da pasta"). O histórico das importações aparece logo abaixo.
   3. **Pela linha de comando:**
