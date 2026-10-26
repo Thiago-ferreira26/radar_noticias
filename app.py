@@ -125,9 +125,12 @@ def render_cards(df: pd.DataFrame, new_day: str | None = None, limit: int | None
 
 
 VERTICALS = ["Energia", "Minerais", "Infraestrutura"]
+# Atalhos: os mesmos critérios dos indicadores "Novos hoje" e "Alta prioridade" do topo.
+HIGHLIGHTS = ["Novas hoje", "Alta prioridade"]
+HIGHLIGHT_COLORS = {"Novas hoje": "#1f5f5a", "Alta prioridade": "#c9761a"}
 PRAZOS = ["Curto", "Médio", "Longo", "A confirmar"]
 UF_PRIORITY = ["CE", "PA", "NE", "BR"]
-FILTER_SUFFIXES = ("q", "v", "p", "pz", "c", "uf", "fase", "exec")
+FILTER_SUFFIXES = ("q", "d", "v", "p", "pz", "c", "uf", "fase", "exec")
 
 
 def prazo_tier(value) -> str:
@@ -176,6 +179,7 @@ def newsletter_filters(df: pd.DataFrame, key: str) -> pd.DataFrame:
                        label_visibility="collapsed")
     c_clear.button("Limpar filtros", key=f"{key}_clear", on_click=clear_filters, args=(key,), type="tertiary")
 
+    destaques = chip_row("Destaques", HIGHLIGHTS, f"{key}_d", dots=HIGHLIGHT_COLORS, big=True)
     verts = chip_row("Vertical", VERTICALS, f"{key}_v", dots=ui.VERT_COLORS, big=True)
     pots = chip_row("Potencial", ui.POTENTIALS, f"{key}_p")
     html(ui.criteria())
@@ -201,6 +205,10 @@ def newsletter_filters(df: pd.DataFrame, key: str) -> pd.DataFrame:
         text = (df["lead_im"] + " " + df["title"].fillna("") + " " + df["summary"].fillna("") + " "
                 + df["source"].fillna(""))
         df = df[text.str.contains(q, case=False, regex=False)]
+    if "Novas hoje" in destaques:
+        df = df[df["collected_day"] == config.today().isoformat()]
+    if "Alta prioridade" in destaques:
+        df = df[df["potential"].isin(["Muito Alto", "Alto"])]
     if verts:
         df = df[df["vertical"].isin(verts)]
     if pots:

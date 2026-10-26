@@ -282,7 +282,7 @@ def about(sources: list[str]) -> str:
     chips = "".join(f'<span class="rc-chip">{h(s)}</span>' for s in sources) or '<span class="rc-chip">—</span>'
     return (
         '<div class="rc-about"><div><h2>Como este painel funciona</h2>'
-        "<p>Todo dia às 08:00 (horário de Fortaleza) uma rotina automática busca no Exa (até 5 buscas/dia) e no "
+        "<p>Todo dia às 08:00 (horário de Fortaleza) uma rotina automática busca no Exa, no Firecrawl e no "
         "DuckDuckGo notícias do Brasil sobre investimentos, obras e projetos que possam gerar demanda de locação de "
         "guindaste e área — energia, portos, mineração, construção industrial e infraestrutura, com prioridade para "
         "Ceará e Pará. Cada item recebe, por regras automáticas, vertical, categoria, UF, prazo, potencial "

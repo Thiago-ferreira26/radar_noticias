@@ -126,7 +126,8 @@ A **Visão do dia** mostra as **12 principais de cada tema** (por potencial), co
 
 ### Barra de filtros
 
-As abas Visão do dia e Histórico usam a barra de filtros da newsletter: busca, chips de
+As abas Visão do dia e Histórico usam a barra de filtros da newsletter: busca, os atalhos
+**Destaques** (**Novas hoje** e **Alta prioridade**, os mesmos critérios dos indicadores do topo), chips de
 **Vertical**, **Potencial** (com "Como o potencial é calculado"), **Prazo da demanda**,
 **Categoria** e **Região**, listas de **Fase do projeto** e **Empresa executora** e o botão
 **Baixar Excel organizado**. O Excel exporta o resultado filtrado nas mesmas 4 abas da newsletter:
