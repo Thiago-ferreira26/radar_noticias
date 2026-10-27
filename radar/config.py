@@ -67,6 +67,9 @@ DEFAULTS = {
         "porte_relevante_milhoes": 100,
     },
     "excluir_se_contiver": [],
+    # Fontes diretas por RSS (sem custo de API): [{nome, url, tema, ativo}]
+    "fontes_rss": [],
+    "rss": {"dias_retroativos": 14},
     "temas": [],
 }
 

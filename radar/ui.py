@@ -15,7 +15,8 @@ CAT_COLORS = {
 VERT_COLORS = {"Energia": "#2f7fa8", "Minerais": "#a8752f", "Infraestrutura": "#4a6a86"}
 POTENTIALS = ["Muito Alto", "Alto", "Médio", "Baixo"]
 POT_CLASS = {"Muito Alto": "pot-muito-alto", "Alto": "pot-alto", "Médio": "pot-medio", "Baixo": "pot-baixo"}
-ENGINE_LABEL = {"exa": "Exa", "firecrawl": "Firecrawl", "duckduckgo": "DuckDuckGo", "newsletter": "Newsletter"}
+ENGINE_LABEL = {"exa": "Exa", "firecrawl": "Firecrawl", "rss": "RSS", "duckduckgo": "DuckDuckGo",
+                "newsletter": "Newsletter", "manual": "Inclusão manual"}
 UF_LABEL = {
     "AC": "Acre", "AL": "Alagoas", "AP": "Amapá", "AM": "Amazonas", "BA": "Bahia", "CE": "Ceará",
     "DF": "Distrito Federal", "ES": "Espírito Santo", "GO": "Goiás", "MA": "Maranhão", "MT": "Mato Grosso",

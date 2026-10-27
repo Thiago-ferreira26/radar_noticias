@@ -69,8 +69,9 @@ def _store_results(results, term, engine, run_id, cfg, image_jobs: list) -> int:
     return new
 
 
-def run_collection(trigger: str = "manual", progress=None) -> dict:
-    """Executa uma coleta completa. `progress(fração, mensagem)` é opcional (usado pelo Streamlit)."""
+def run_collection(trigger: str = "manual", progress=None, only_feeds: bool = False) -> dict:
+    """Executa uma coleta completa. `progress(fração, mensagem)` é opcional (usado pelo Streamlit).
+    only_feeds=True: só as fontes RSS (sem gastar cota de Exa/Firecrawl e sem DuckDuckGo)."""
     setup_logging()
     db.init_db()
     cfg = config.load_config()
@@ -115,7 +116,12 @@ def run_collection(trigger: str = "manual", progress=None) -> dict:
         fc_remaining = max(0, fc_limit - db.api_used("firecrawl", day_key)["used"])
         fc_terms = select_exa_terms(terms, fc_remaining, day.toordinal(), flag="firecrawl") if fc_key else []
 
-        total_steps = len(exa_terms) + len(fc_terms) + len(terms) or 1
+        feeds = [f for f in cfg.get("fontes_rss") or [] if f.get("url") and f.get("ativo", True)]
+        ddg_terms = list(terms)
+        if only_feeds:
+            exa_terms, fc_terms, ddg_terms = [], [], []
+
+        total_steps = len(exa_terms) + len(fc_terms) + len(feeds) + len(ddg_terms) or 1
         step = 0
         for term in exa_terms:
             step += 1
@@ -155,9 +161,26 @@ def run_collection(trigger: str = "manual", progress=None) -> dict:
                 db.log_search(run_id, "firecrawl", term["texto"], term["tema"], status="erro",
                               error=fail("firecrawl", term["texto"], exc))
 
+        # ---------------- Fontes diretas (RSS): sem custo de API
+        for feed in feeds:
+            step += 1
+            name = feed.get("nome") or engines.source_from_url(feed["url"])
+            say(step / total_steps, f"RSS: {name}")
+            term = {"texto": f"RSS: {name}", "tema": feed.get("tema")}
+            stats["n_searches"] += 1
+            try:
+                results = engines.search_rss(feed["url"], cfg, name)
+                new = _store_results(results, term, "rss", run_id, cfg, image_jobs)
+                stats["n_results"] += len(results)
+                stats["n_new"] += new
+                db.log_search(run_id, "rss", term["texto"], term["tema"], len(results), new)
+            except Exception as exc:
+                db.log_search(run_id, "rss", term["texto"], term["tema"], status="erro",
+                              error=fail("rss", term["texto"], exc))
+
         # ---------------- DuckDuckGo: todos os termos ativos
         pause = float(cfg["ddg"].get("pausa_segundos", 2))
-        for i, term in enumerate(terms):
+        for i, term in enumerate(ddg_terms):
             step += 1
             say(step / total_steps, f"DuckDuckGo: {term['texto']}")
             if i:
@@ -304,11 +327,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Coleta de notícias do Radar Cordeiro")
     parser.add_argument("--agendado", action="store_true", help="marca a execução como agendada")
     parser.add_argument("--reclassificar", action="store_true", help="só reaplica a classificação à base existente")
+    parser.add_argument("--rss", action="store_true", help="coleta só as fontes RSS (sem cota de Exa/Firecrawl)")
     args = parser.parse_args()
     if args.reclassificar:
         print(f"{reclassify_all()} notícias reclassificadas.")
         return
-    result = run_collection("agendado" if args.agendado else "manual")
+    result = run_collection("agendado" if args.agendado else "manual", only_feeds=args.rss)
     update_obras("agendado" if args.agendado else "manual")
     print(result)
 

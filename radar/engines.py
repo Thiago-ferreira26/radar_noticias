@@ -192,6 +192,59 @@ def search_firecrawl(query: str, api_key: str, cfg: dict) -> tuple[list[dict], i
     return results, int(data.get("creditsUsed") or 0)
 
 
+# ------------------------------------------------------------ RSS (fontes diretas)
+def search_rss(url: str, cfg: dict, name: str | None = None) -> list[dict]:
+    """Notícias de um feed RSS/Atom (ex.: https://brasilmineral.com.br/feed/), dos últimos N dias.
+    Sem custo de API: lê o feed publicado pelo próprio site."""
+    from email.utils import parsedate_to_datetime
+    from html import unescape
+    from xml.etree import ElementTree as ET
+
+    from .images import HEADERS
+
+    days = int(cfg.get("rss", {}).get("dias_retroativos", 14))
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    resp = requests.get(url, headers=HEADERS, timeout=40)
+    if resp.status_code >= 400:
+        raise RuntimeError(f"RSS HTTP {resp.status_code}: {url}")
+    root = ET.fromstring(resp.content)
+    atom = "{http://www.w3.org/2005/Atom}"
+    channel = root.findtext("./channel/title") or root.findtext(f"{atom}title") or name
+    items = root.findall("./channel/item") or root.findall(f"{atom}entry")
+    results = []
+    for it in items:
+        link = it.findtext("link") or ""
+        if not link:
+            el = it.find(f"{atom}link")
+            link = el.get("href", "") if el is not None else ""
+        title = it.findtext("title") or it.findtext(f"{atom}title") or ""
+        if not link or not title:
+            continue
+        raw_date = it.findtext("pubDate") or it.findtext(f"{atom}updated") or it.findtext(f"{atom}published")
+        try:
+            dt = parsedate_to_datetime(raw_date) if raw_date and "," in raw_date else datetime.fromisoformat(
+                str(raw_date).replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+        except (TypeError, ValueError):
+            dt = None
+        if dt and dt < since:
+            continue
+        desc = it.findtext("description") or it.findtext(f"{atom}summary") or ""
+        desc = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", unescape(desc))).strip()
+        enc = it.find("enclosure")
+        image = enc.get("url") if enc is not None and (enc.get("type") or "image").startswith("image") else None
+        results.append({
+            "title": _clean(unescape(title), 300),
+            "url": link.strip(),
+            "source": name or channel or source_from_url(link),
+            "published_at": dt.astimezone(config.TZ).isoformat(timespec="seconds") if dt else None,
+            "summary": _clean(desc),
+            "image": image,
+        })
+    return results
+
+
 # ------------------------------------------------------------ DuckDuckGo
 def _ddgs_class():
     try:

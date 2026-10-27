@@ -18,6 +18,11 @@ firecrawl:
   limite_diario: 10         # buscas por dia; cada busca consome créditos (~2 por 10 notícias)
   resultados_por_busca: 10
   periodo: w                # d = dia, w = semana, m = mês
+# Fontes diretas por RSS: lidas a cada coleta, sem custo de API (notícias dos últimos N dias).
+rss:
+  dias_retroativos: 14
+fontes_rss:
+  - {nome: Brasil Mineral, url: "https://brasilmineral.com.br/feed/", tema: Mineração, ativo: true}
 classificacao:
   ufs_prioritarias: [CE, PA]
   ufs_atuacao: [MA, PI, RN, PB, PE, AL, SE, BA]

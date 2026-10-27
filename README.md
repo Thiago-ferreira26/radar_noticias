@@ -335,11 +335,16 @@ Coleta avulsa pela linha de comando:
    - **Termos:** entram os marcados `firecrawl: true`; sem nenhum marcado, todos, por prioridade e
      com rodízio diário.
    - **Chave:** `FIRECRAWL_API_KEY`, no `.env` ou nos Secrets.
-3. **DuckDuckGo** (biblioteca `ddgs`): busca de notícias para todos os termos ativos, com região
+3. **Fontes diretas por RSS**, sem custo de API: lidas a cada coleta, com as notícias dos últimos 14
+   dias. Hoje: **Brasil Mineral** (`https://brasilmineral.com.br/feed/`). Para acrescentar um site,
+   inclua em `fontes_rss` no `config/termos.yaml`, por exemplo
+   `{nome: Nome do site, url: "https://site/feed/", tema: Mineração, ativo: true}`. Para ler só os
+   feeds, sem gastar cota de Exa e Firecrawl: `python -m radar.collector --rss`.
+4. **DuckDuckGo** (biblioteca `ddgs`): busca de notícias para todos os termos ativos, com região
    `br-pt`, período configurável (dia, semana ou mês) e uma pausa entre buscas para evitar bloqueio.
-4. **Deduplicação**: a URL é normalizada (sem `utm_*`, fragmento ou barra final) e é única no banco.
+5. **Deduplicação**: a URL é normalizada (sem `utm_*`, fragmento ou barra final) e é única no banco.
    Quando uma notícia reaparece, o banco só atualiza `times_seen` e `last_seen_at`.
-5. **Classificação automática** (`radar/classify.py`): regras que seguem os critérios de potencial
+6. **Classificação automática** (`radar/classify.py`): regras que seguem os critérios de potencial
    da newsletter (relação com içamento, UF dentro da área de atuação, decisão pendente ou obra em
    andamento, porte financeiro). Elas atribuem vertical, categoria, UF, prazo, potencial, demanda e
    o texto "Impacto para a Cordeiro". **É uma triagem por palavras-chave, não uma análise.** Nas 52

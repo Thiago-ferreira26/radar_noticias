@@ -56,7 +56,11 @@ CRANE_KW = ["obra", "constru", "implant", "instala", "fabrica", "usina", "parque
             "laminadora", "rodoviari", "ferroviari", "arrendamento"]
 # Conteúdo sem obra (regulatório, macro, mercado financeiro).
 LOW_KW = ["regulament", "resolucao", "aneel aprova reajuste", "tarifa", "bolsa de valores", "dividendos",
-          "cotacao", "inflacao", "selic", "artigo de opiniao", "artigo:", "podcast"]
+          "cotacao", "inflacao", "selic", "artigo de opiniao", "artigo:", "podcast",
+          # notícias corporativas/de mercado sem obra (comuns em portais setoriais como o Brasil Mineral)
+          "vagas de estagio", "premio", "premiada", "premiado", "seminario", "webinar", "perspectiva",
+          "rating", "ebitda", "trimestre", "bonds", "capta r", "capta us", "rodada pre", "rodada de investimento",
+          "consultores", "acoes da", "acoes sobem", "acoes caem", "acoes disparam"]
 PENDING_KW = ["estudo", "estuda", "avalia", "planeja", "pretende", "preve", "previsto", "consulta publica",
               "edital", "leilao", "licitac", "memorando", "protocolo de intencoes", "intencao", "proposta",
               "viabilidade", "licenca previa", "pode receber", "negocia", "em analise"]
@@ -85,6 +89,9 @@ CITY_UF = {
     "sao luis": "MA", "itaqui": "MA", "teresina": "PI", "parnaiba": "PI", "natal": "RN", "mossoro": "RN",
     "joao pessoa": "PB", "recife": "PE", "suape": "PE", "maceio": "AL", "aracaju": "SE", "salvador": "BA",
     "camacari": "BA", "manaus": "AM",
+    # polos de mineração/indústria pesada
+    "porto trombetas": "PA", "trombetas": "PA", "carajas": "PA", "alunorte": "PA", "albras": "PA",
+    "maraba": "PA", "itaituba": "PA", "caetite": "BA", "lagoa real": "BA", "itabira": "MG", "congonhas": "MG",
 }
 UF_CODES = set(UF_NAMES.values())
 NORDESTE = {"MA", "PI", "CE", "RN", "PB", "PE", "AL", "SE", "BA"}
