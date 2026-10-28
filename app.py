@@ -238,96 +238,27 @@ def newsletter_filters(df: pd.DataFrame, key: str) -> pd.DataFrame:
 
 
 
-def _feed_label(feed: dict) -> str:
-    """Nome do feed + editoria quando o endereço é de uma seção (ex.: …/economia/portos/feed/)."""
-    from urllib.parse import urlsplit
-
-    parts = [s for s in urlsplit(feed.get("url", "")).path.split("/") if s and s != "feed"]
-    names = {"industria-empresas": "Indústria & Empresas", "infraestrutura": "Infraestrutura", "energia": "Energia",
-             "portos": "Portos"}
-    slug = parts[-1] if parts and parts[-1] not in ("economia",) else ""
-    section = names.get(slug, slug.replace("-", " ").title())
-    return f"{feed.get('nome', '')} · {section}" if section else feed.get("nome", "")
-
-
 @st.dialog("Fontes de dados", width="large")
 def sources_dialog() -> None:
-    """Todas as fontes que alimentam o Radar: mecanismos de busca, feeds RSS, outras entradas e termos."""
-    st.caption("Tudo o que a coleta diária (08:00, horário de Fortaleza) consulta para montar o painel. "
-               "Sem chaves ou senhas: só nomes e endereços públicos.")
+    """Lista dos portais de onde vieram as notícias do painel (sem detalhes de como foram buscadas)."""
+    from urllib.parse import urlsplit
 
-    st.markdown("##### 1. Mecanismos de busca")
-    terms = list(config.iter_terms(cfg))
-    exa_terms = [x for x in terms if x["exa"]] or terms
-    fc_cfg = cfg["firecrawl"]
-    engines_rows = [
-        {"Fonte": "Exa", "Como funciona": "Busca semântica de notícias no Brasil (últimos "
-         f"{cfg['exa'].get('dias_retroativos', 7)} dias)", "Limite": f"{exa_limit} buscas/dia",
-         "Hoje": f"{exa_today}/{exa_limit}", "Termos": f"{len(exa_terms)} (rodízio)",
-         "Situação": "Ativo" if config.exa_api_key() else "Sem chave"},
-        {"Fonte": "Firecrawl", "Como funciona": "Busca de notícias com filtro Brasil (country BR)",
-         "Limite": f"{fc_limit} buscas/dia", "Hoje": f"{fc_today['used']}/{fc_limit} ({fc_today['credits']} créditos)",
-         "Termos": f"{len([x for x in terms if x['firecrawl']]) or len(terms)} (rodízio)",
-         "Situação": ("Ativo" if config.firecrawl_api_key() else "Sem chave") if fc_cfg.get("ativo", True) else "Desligado"},
-        {"Fonte": "DuckDuckGo", "Como funciona": "Busca de notícias, região br-pt", "Limite": "Sem limite",
-         "Hoje": "—", "Termos": f"{len(terms)} (todos)", "Situação": "Ativo"},
-    ]
-    st.dataframe(pd.DataFrame(engines_rows), hide_index=True, width="stretch")
+    if not len(news):
+        st.caption("Nenhuma notícia no painel ainda.")
+        return
+    sites = (news.assign(site=news["url"].map(lambda u: "{0.scheme}://{0.netloc}".format(urlsplit(u or ""))))
+             .groupby("source").agg(n=("id", "count"), site=("site", "first"))
+             .sort_values(["n"], ascending=False).reset_index())
+    st.caption(f"{len(sites)} portais com notícias no painel ({len(news)} notícias).")
+    rows = "".join(
+        f'<a class="rc-src" href="{ui.h(r.site)}" target="_blank" rel="noopener">'
+        f'<span>{ui.h(r.source)}</span><small>{r.n} notícia{"s" if r.n > 1 else ""}</small></a>'
+        for r in sites.itertuples())
+    html('<style>.rc-src{display:flex;justify-content:space-between;align-items:center;gap:12px;'
+         'background:#e3e8e6;border-radius:8px;padding:8px 12px;margin:0 0 6px;color:#1f5c52!important;'
+         'font-weight:600;text-decoration:none!important}.rc-src:hover{background:#d3dcd9}'
+         '.rc-src small{color:#6b7a76;font-weight:400;white-space:nowrap;text-decoration:none!important}</style>' + rows)
 
-    st.markdown("##### 2. Fontes diretas (RSS)")
-    st.caption("Lidas a cada coleta, sem custo de API: as notícias publicadas pelos próprios sites nos últimos "
-               f"{cfg.get('rss', {}).get('dias_retroativos', 14)} dias.")
-    feeds = cfg.get("fontes_rss") or []
-    if feeds:
-        st.dataframe(
-            pd.DataFrame([{"Fonte": _feed_label(f), "Tema": f.get("tema") or "—",
-                           "Situação": "Ativa" if f.get("ativo", True) else "Desligada", "Feed": f.get("url")}
-                          for f in feeds]),
-            hide_index=True, width="stretch", column_config={"Feed": st.column_config.LinkColumn("Feed")})
-    else:
-        st.caption("Nenhuma fonte RSS configurada.")
-
-    st.markdown("##### 3. Outras entradas")
-    n_news = int((all_news["engine"] == "newsletter").sum()) if len(all_news) else 0
-    n_manual = int((all_news["engine"] == "manual").sum()) if len(all_news) else 0
-    st.markdown(f"- **Newsletter Radar Cordeiro** — fichas do executivo pesquisadas pelo analista "
-                f"({n_news} notícias importadas).\n"
-                f"- **Inclusão manual por link** — matérias coladas pelo administrador ({n_manual} notícias).")
-
-    with st.expander(f"4. Termos de busca ({len(terms)} ativos)"):
-        by_theme = {}
-        for x in terms:
-            flags = " · ".join(f for f, on in (("Exa", x["exa"]), ("Firecrawl", x["firecrawl"])) if on)
-            by_theme.setdefault(x["tema"], []).append(x["texto"] + (f" ({flags})" if flags else ""))
-        for theme, items in by_theme.items():
-            st.markdown(f"**{theme}:** " + "; ".join(items))
-
-    with st.expander("5. Sites que mais geraram notícias no painel"):
-        if len(news):
-            top = (news.assign(Mecanismo=news["engine"].map(lambda e: ui.ENGINE_LABEL.get(e, e)))
-                   .groupby("source").agg(Notícias=("id", "count"),
-                                          Mecanismos=("Mecanismo", lambda s: ", ".join(sorted(set(s)))))
-                   .sort_values("Notícias", ascending=False).head(40).reset_index()
-                   .rename(columns={"source": "Site"}))
-            st.caption(f"{news['source'].nunique()} sites diferentes entre as {len(news)} notícias visíveis.")
-            st.dataframe(top, hide_index=True, width="stretch")
-        else:
-            st.caption("Nenhuma notícia na base ainda.")
-
-    skipped = cfg.get("fontes_nao_incluidas") or []
-    if skipped:
-        with st.expander(f"6. Fontes avaliadas e não usadas como feed ({len(skipped)})"):
-            st.dataframe(pd.DataFrame([{"Fonte": s.get("nome"), "Motivo": s.get("motivo"), "Site": s.get("url")}
-                                       for s in skipped]),
-                         hide_index=True, width="stretch", column_config={"Site": st.column_config.LinkColumn("Site")})
-
-    st.markdown("##### 7. Última coleta")
-    if len(finished):
-        last = finished.iloc[0]
-        st.markdown(f"#{int(last['id'])} · {ui.fmt_date(last['finished_at'], True)} · "
-                    f"{'agendada' if last['trigger'] == 'agendado' else 'manual'} · {last['message'] or ''}")
-    else:
-        st.caption("Nenhuma coleta registrada.")
 
 # ------------------------------------------------------------------ cabeçalho
 all_news = load_news()
