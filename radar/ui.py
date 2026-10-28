@@ -321,6 +321,34 @@ def criteria() -> str:
     )
 
 
+def nota_criteria(weights: dict[str, float]) -> str:
+    """Como a nota 0–10 é calculada (pesos atuais da Configuração), recolhido como o texto do potencial."""
+    def p(k):
+        return f"{weights.get(k, 0):.1f}".replace(".", ",").replace(",0", "")
+    return (
+        '<details class="rc-criteria"><summary>Como a nota é calculada</summary><div class="rc-criteria-body">'
+        "<p>A nota (0 a 10) responde: <b>vale a pena jogar esta notícia no Bitrix?</b> É a chance de ela virar "
+        "relacionamento e demanda para a Cordeiro. Soma de seis critérios, cada um até o seu peso:</p><ol>"
+        f"<li><b>Demanda de guindaste/área</b> (até {p('demanda')}): Sim vale o peso todo; Possível, cerca de metade; "
+        "Não, zero.</li>"
+        f"<li><b>Momento da obra</b> (até {p('fase')}): a melhor hora é antes de o pacote de içamento ser contratado. "
+        "Contratação/EPC em curso &gt; aprovado ou licenciado &gt; leilão/edital &gt; obra em andamento &gt; "
+        "investimento anunciado &gt; em estudo &gt; só contexto. Obra travada (suspensa, bloqueada) quase zera.</li>"
+        f"<li><b>Região</b> (até {p('regiao')}): CE/PA &gt; Nordeste &gt; nacional &gt; fora da área de atuação.</li>"
+        f"<li><b>Empresas para contatar</b> (até {p('contato')}): executora/EPC identificada na ficha pesquisada &gt; "
+        "empresas mapeadas &gt; empresa citada no texto &gt; nenhuma. É o que acelera a pesquisa de contatos.</li>"
+        f"<li><b>Porte do investimento</b> (até {p('porte')}): R$ 1 bi ou mais &gt; R$ 100 mi a 1 bi &gt; menor &gt; "
+        "sem valor citado.</li>"
+        f"<li><b>Prazo</b> (até {p('prazo')}): Curto &gt; Médio &gt; A confirmar &gt; Longo.</li>"
+        "</ol><p>Ajustes: notícia com mais de 60 dias perde 0,5 ponto e com mais de 120 dias, 1 ponto; obra "
+        "inaugurada/concluída fica com no máximo 4,5.</p>"
+        "<p>Faixas: <b>Quente</b> 8 a 10 → enviar ao Bitrix · <b>Morna</b> 6 a 7,9 → pesquisar a ficha · "
+        "<b>Fria</b> 4 a 5,9 → monitorar · <b>Baixa</b> abaixo de 4 → só registro.</p>"
+        "<p>O card mostra o motivo resumido da nota. Nas fichas pesquisadas, a classificação do analista prevalece "
+        "sobre a automática.</p></div></details>"
+    )
+
+
 def section_title(title: str, count: int, color: str | None = None) -> str:
     dot = f'<span class="dot" style="background:{color}"></span>' if color else ""
     return f'<div class="rc-section">{dot}{h(title)} <span class="count">({count})</span></div>'

@@ -138,7 +138,8 @@ HIGHLIGHTS = ["Novas hoje", "Alta prioridade"]
 HIGHLIGHT_COLORS = {"Novas hoje": "#1f5f5a", "Alta prioridade": "#c9761a"}
 PRAZOS = ["Curto", "Médio", "Longo", "A confirmar"]
 UF_PRIORITY = ["CE", "PA", "NE", "BR"]
-FILTER_SUFFIXES = ("q", "d", "v", "p", "pz", "c", "uf", "fase", "exec")
+FILTER_SUFFIXES = ("q", "d", "v", "p", "n", "pz", "c", "uf", "fase", "exec")
+NOTA_LABELS = {"Quente": "Quente (8–10)", "Morna": "Morna (6–7,9)", "Fria": "Fria (4–5,9)", "Baixa": "Baixa (< 4)"}
 
 
 def prazo_tier(value) -> str:
@@ -191,6 +192,8 @@ def newsletter_filters(df: pd.DataFrame, key: str) -> pd.DataFrame:
     verts = chip_row("Vertical", VERTICALS, f"{key}_v", dots=ui.VERT_COLORS, big=True)
     pots = chip_row("Potencial", ui.POTENTIALS, f"{key}_p")
     html(ui.criteria())
+    notas = chip_row("Nota", list(NOTA_LABELS), f"{key}_n", fmt=NOTA_LABELS.get, dots=ui.NOTA_COLORS)
+    html(ui.nota_criteria(score.weights(cfg)))
     prazos = chip_row("Prazo da demanda", PRAZOS, f"{key}_pz", fmt=prazo_label)
     present = set(df["category"].dropna())
     cats = [c for c in CATEGORIES if c in present] + sorted(present - set(CATEGORIES))
@@ -221,6 +224,8 @@ def newsletter_filters(df: pd.DataFrame, key: str) -> pd.DataFrame:
         df = df[df["vertical"].isin(verts)]
     if pots:
         df = df[df["potential"].isin(pots)]
+    if notas:
+        df = df[df["faixa"].isin(notas)]
     if prazos:
         df = df[df["prazo"].map(prazo_tier).isin(prazos)]
     if sel_cats:
@@ -322,7 +327,7 @@ with tab_day:
         days = sorted(current["collected_day"].unique(), reverse=True) or [today_key]
         day = today_key if today_key in days else days[0]
         label = "hoje" if day == today_key else "última coleta com resultados"
-        c_cap, c_ord = st.columns([4, 1], vertical_alignment="center")
+        c_cap, c_ord = st.columns([3, 1], vertical_alignment="center")
         n_day = int((current["collected_day"] == day).sum())
         totals = {"Mais recentes": len(current), "Maior nota": len(current), "Maior potencial": n_day, "Mais antigas": int(news["antiga"].sum()),
                   "Todas": len(news)}

@@ -322,8 +322,9 @@ def _pg_pool():
         # prepare_threshold=None: compatível com o pooler do Supabase (Supavisor).
         # check: testa a conexão antes de entregá-la. O Supabase fecha conexões paradas, e a TV ligada o dia
         # todo dava "server closed the connection unexpectedly" na recarga seguinte.
-        _pool = ConnectionPool(database_url(), min_size=1, max_size=6, open=True, timeout=30,
-                               check=ConnectionPool.check_connection, max_idle=300,
+        # max_size/max_idle baixos: o pooler em modo sessão aceita só 15 clientes somando Cloud, local e agendador.
+        _pool = ConnectionPool(database_url(), min_size=1, max_size=4, open=True, timeout=30,
+                               check=ConnectionPool.check_connection, max_idle=120,
                                kwargs={"autocommit": True, "prepare_threshold": None})
         atexit.register(_pool.close)  # fecha antes do encerramento do Python (evita aviso no fim de scripts)
     return _pool
