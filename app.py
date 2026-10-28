@@ -309,14 +309,15 @@ with tab_day:
     if news.empty:
         html(ui.empty("Nenhuma notícia na base ainda. Execute a primeira coleta na aba “Coleta e logs”."))
     else:
-        # "Mais antigas" = notícias já enviadas em newsletter; "Todas" = painel inteiro; as outras mostram a última coleta.
+        # "Mais recentes" = tudo o que ainda não foi enviado; "Maior potencial" = última coleta;
+        # "Mais antigas" = já enviadas em newsletter; "Todas" = painel inteiro.
         current = news[~news["antiga"]]
         days = sorted(current["collected_day"].unique(), reverse=True) or [today_key]
         day = today_key if today_key in days else days[0]
         label = "hoje" if day == today_key else "última coleta com resultados"
         c_cap, c_ord = st.columns([4, 1], vertical_alignment="center")
         n_day = int((current["collected_day"] == day).sum())
-        totals = {"Mais recentes": n_day, "Maior potencial": n_day, "Mais antigas": int(news["antiga"].sum()),
+        totals = {"Mais recentes": len(current), "Maior potencial": n_day, "Mais antigas": int(news["antiga"].sum()),
                   "Todas": len(news)}
         order = c_ord.selectbox("Ordenar", list(totals), format_func=lambda o: f"{o} ({totals[o]})",
                                 key="day_order", label_visibility="collapsed")
@@ -328,9 +329,13 @@ with tab_day:
             c_cap.caption(f"Todas as notícias do painel ({len(news)}), agrupadas por tema, das mais novas para as "
                           "mais antigas.")
             base = news
+        elif order == "Mais recentes":
+            c_cap.caption(f"Notícias coletadas pelo Radar e ainda não enviadas na newsletter ({len(current)}), "
+                          "agrupadas por tema, das mais novas para as mais antigas.")
+            base = current
         else:
             c_cap.caption(f"Notícias coletadas em **{ui.fmt_date(day)}** ({label}), agrupadas por tema e ordenadas por "
-                          f"{'data' if order == 'Mais recentes' else 'potencial'}.")
+                          "potencial.")
             base = current[current["collected_day"] == day]
         df_day = newsletter_filters(base, "day")
         n_low = int((df_day["potential"] == "Baixo").sum())
