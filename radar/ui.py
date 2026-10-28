@@ -122,6 +122,14 @@ h1,h2,h3{font-family:"IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;}
 .rc-empty{padding:40px 20px; text-align:center; color:var(--ink-faint); font-size:14px; background:var(--surface);
   border:1px dashed var(--border); border-radius:12px;}
 
+/* Nota 0–10: chance de virar relacionamento e demanda */
+.rc-nota{display:flex;gap:10px;align-items:center;margin:6px 0 8px;padding:6px 10px;border-radius:8px;
+  border-left:4px solid var(--c);background:color-mix(in srgb, var(--c) 9%, transparent)}
+.rc-nota b{font-size:1.45rem;line-height:1;color:var(--c);min-width:2.2em}
+.rc-nota span{font-size:.78rem;color:#4b5a56;line-height:1.3}
+.rc-nota em{display:block;font-style:normal;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+  color:var(--c);font-size:.7rem}
+
 /* Ficha do executivo (mesmo desenho da newsletter) */
 .cord-action{border:1px solid var(--border); border-radius:10px; overflow:hidden; background:var(--surface);}
 .cord-summary{padding:13px; background:var(--teal-tint); color:var(--ink); font-size:13px; line-height:1.55;}
@@ -438,6 +446,9 @@ def crm_block(sent: dict | None, lead_url: str | None = None) -> str:
     )
 
 
+NOTA_COLORS = {"Quente": "#b3261e", "Morna": "#c9761a", "Fria": "#3d6f8f", "Baixa": "#7c8b86"}
+
+
 def card(row, is_new: bool = False, ficha_html: str = "", images: list[str] | None = None,
          crm_html: str = "") -> str:
     pot = row.get("potential") or "—"
@@ -461,11 +472,17 @@ def card(row, is_new: bool = False, ficha_html: str = "", images: list[str] | No
     signal = f'<span class="rc-signal">{h(row.get("signal_type"))}</span>' if row.get("signal_type") else ""
     prazo = f'<span class="rc-tag eng">Prazo: {h(row.get("prazo"))}</span>' if row.get("prazo") else ""
     published = fmt_date(row.get("published_at")) if row.get("published_at") else "pub. n/d"
+    nota = ""
+    if row.get("nota") is not None:
+        color = NOTA_COLORS.get(row.get("faixa"), "#7c8b86")
+        value = f'{row["nota"]:.1f}'.replace(".", ",")
+        nota = (f'<div class="rc-nota" style="--c:{color}"><b>{value}</b>'
+                f'<span><em>Nota · {h(row.get("faixa"))}</em>{h(row.get("motivos"))}</span></div>')
     return (
         f'<article class="rc-card {pc}">'
         + (f'<img class="rc-img" src="{h(images[0])}" alt="" loading="lazy">' if images else "") +
         f'<div class="rc-card-top"><div class="rc-tags">{vert_tag}{cat_tag}{uf_tags}</div>{new_badge}</div>'
-        f'<div class="rc-im"><span>Lead IM</span><b>{h(im_code(row))}</b></div>'
+        f'<div class="rc-im"><span>Lead IM</span><b>{h(im_code(row))}</b></div>{nota}'
         f'<h3><a href="{h(row.get("url"))}" target="_blank" rel="noopener">{h(row.get("title") or "(sem título)")}</a></h3>'
         f'<p class="summary">{h(row.get("summary"))}</p>'
         f"{crm_html}{impact}{ficha_html}"

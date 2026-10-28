@@ -30,7 +30,7 @@ def _rows(docs: list[tuple[dict, dict]], accounts: dict):
         title = row.get("title") or ""
         accs = [k for k in d.get("accounts") or [] if k in accounts]
         used.update(accs)
-        opp.append([nid, title, (row.get("ufs") or "").replace(",", ", "),
+        opp.append([nid, title, (row.get("ufs") or "").replace(",", ", "), row.get("nota"), row.get("faixa"),
                     "\n".join(accounts[k]["name"] for k in accs) or "Identificar contratante",
                     d.get("phase"), d.get("priority"), d.get("need"), (d.get("steps") or [""])[0], "", "Não iniciado"])
 
@@ -75,9 +75,9 @@ def workbook_bytes(docs: list[tuple[dict, dict]], accounts: dict) -> bytes:
     sheets = [
         ("Oportunidades", "Radar Cordeiro — oportunidades",
          "Filtre a lista. Use o Lead IM para consultar Roteiros. Responsável e andamento são campos para preencher.",
-         ["Lead IM", "Notícia / projeto", "UF", "Conta / canal inicial", "Fase do projeto", "Prioridade",
-          "Serviço potencial", "Primeira ação", "Responsável", "Andamento"],
-         opp, [14, 49, 12, 29, 30, 17, 40, 60, 22, 24], {8, 9}),
+         ["Lead IM", "Notícia / projeto", "UF", "Nota (0–10)", "Faixa", "Conta / canal inicial", "Fase do projeto",
+          "Prioridade", "Serviço potencial", "Primeira ação", "Responsável", "Andamento"],
+         opp, [14, 49, 12, 11, 11, 29, 30, 17, 40, 60, 22, 24], {10, 11}),
         ("Roteiros", "Roteiros por oportunidade",
          "Filtre por Lead IM e tópico. Etapas em dias úteis. Faixas internas são estimativas de planejamento, não SLAs. "
          "Espera do cliente separada.",

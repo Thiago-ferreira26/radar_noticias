@@ -157,6 +157,26 @@ As abas Visão do dia e Histórico usam a barra de filtros da newsletter: busca,
 
 Os chips de Categoria e Região mostram só o que existe na base.
 
+### Nota da notícia (0 a 10)
+
+Cada card mostra uma nota de 0 a 10 que responde: *vale a pena o executivo jogar esta notícia no
+Bitrix?* — a chance de virar relacionamento e demanda (`radar/score.py`). Seis critérios, cada um até
+o seu peso (padrão; editáveis em Configuração e reescalados para somar 10):
+
+| Critério | Peso | Níveis |
+|---|---|---|
+| Demanda de guindaste/área | 2,5 | Sim · Possível · Não |
+| Momento da obra | 2,5 | contratação/EPC em curso > aprovado/licenciado > leilão/edital > obra em andamento > anúncio > estudo > só contexto; obra travada ou concluída quase zera |
+| Região | 1,5 | CE/PA > Nordeste > nacional > fora da área |
+| Empresas para contatar | 1,5 | executora identificada (ficha pesquisada) > empresas mapeadas > empresa citada no texto > nenhuma |
+| Porte do investimento | 1,0 | ≥ R$ 1 bi > R$ 100 mi–1 bi > menor > sem valor |
+| Prazo | 1,0 | Curto > Médio > a confirmar > Longo |
+
+Notícia com mais de 60 dias perde 0,5 ponto; com mais de 120 dias, 1 ponto. Obra inaugurada/concluída
+fica com no máximo 4,5. Faixas: **Quente** ≥ 8 (enviar ao Bitrix), **Morna** ≥ 6 (pesquisar),
+**Fria** ≥ 4 (monitorar), **Baixa** < 4. O seletor tem a opção **Maior nota**, o Histórico ordena por
+nota e o Excel traz as colunas Nota e Faixa. A nota é calculada na hora (não fica gravada no banco).
+
 ### Enviar oportunidade para o Bitrix24
 
 Cada card tem o botão **Enviar para o Bitrix**. Ele abre a lista de usuários; depois de

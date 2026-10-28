@@ -10,7 +10,7 @@ from datetime import date, timedelta
 import pandas as pd
 import streamlit as st
 
-from radar import auth, config, crm, db, dossier, export, images, ui
+from radar import auth, config, crm, db, dossier, export, images, score, ui
 from radar.collector import add_from_url, run_collection
 from radar.classify import CATEGORIES, has_relation
 
@@ -53,6 +53,13 @@ def load_news() -> pd.DataFrame:
     df["fase"] = [f.get("phase") for f in fichas]
     df["executor"] = [f.get("executor") for f in fichas]
     df["ficha_origem"] = [f.get("origin") for f in fichas]
+    # Nota 0–10: chance de a notícia virar relacionamento e demanda (radar/score.py).
+    cfg_now = config.load_config()
+    w = score.weights(cfg_now)
+    notas = [score.score(r, f, cfg_now, w) for r, f in zip(df.to_dict("records"), fichas)]
+    df["nota"] = [n["nota"] for n in notas]
+    df["faixa"] = [n["faixa"] for n in notas]
+    df["motivos"] = [n["motivos"] for n in notas]
     imgs = images.images_by_news()
     df["images"] = [imgs.get(i, []) for i in df["id"]]
     return df
@@ -317,7 +324,7 @@ with tab_day:
         label = "hoje" if day == today_key else "última coleta com resultados"
         c_cap, c_ord = st.columns([4, 1], vertical_alignment="center")
         n_day = int((current["collected_day"] == day).sum())
-        totals = {"Mais recentes": len(current), "Maior potencial": n_day, "Mais antigas": int(news["antiga"].sum()),
+        totals = {"Mais recentes": len(current), "Maior nota": len(current), "Maior potencial": n_day, "Mais antigas": int(news["antiga"].sum()),
                   "Todas": len(news)}
         order = c_ord.selectbox("Ordenar", list(totals), format_func=lambda o: f"{o} ({totals[o]})",
                                 key="day_order", label_visibility="collapsed")
@@ -329,6 +336,10 @@ with tab_day:
             c_cap.caption(f"Todas as notícias do painel ({len(news)}), agrupadas por tema, das mais novas para as "
                           "mais antigas.")
             base = news
+        elif order == "Maior nota":
+            c_cap.caption(f"Notícias ainda não enviadas na newsletter ({len(current)}), agrupadas por tema, da maior "
+                          "para a menor nota (chance de virar relacionamento e demanda).")
+            base = current
         elif order == "Mais recentes":
             c_cap.caption(f"Notícias coletadas pelo Radar e ainda não enviadas na newsletter ({len(current)}), "
                           "agrupadas por tema, das mais novas para as mais antigas.")
@@ -343,6 +354,8 @@ with tab_day:
             df_day = df_day[df_day["potential"] != "Baixo"]
         if order == "Maior potencial":
             df_day = df_day.sort_values(["pot_rank", "sort_date"], ascending=[True, False])
+        elif order == "Maior nota":
+            df_day = df_day.sort_values(["nota", "sort_date"], ascending=[False, False])
         else:
             df_day = df_day.sort_values("sort_date", ascending=order == "Mais antigas")
         if df_day.empty:
@@ -411,14 +424,18 @@ with tab_hist:
             base = base[base["ficha_origem"].isin(origens)]
         df = newsletter_filters(base, "hist")
 
-        sort = st.selectbox("Ordenar", ["Mais recentes", "Maior potencial", "Mais antigas", "Todas"], label_visibility="collapsed")
+        sort = st.selectbox("Ordenar", ["Mais recentes", "Maior nota", "Maior potencial", "Mais antigas"],
+                            label_visibility="collapsed")
         if sort == "Maior potencial":
             df = df.sort_values(["pot_rank", "sort_date"], ascending=[True, False])
+        elif sort == "Maior nota":
+            df = df.sort_values(["nota", "sort_date"], ascending=[False, False])
         else:
             df = df.sort_values("sort_date", ascending=(sort == "Mais antigas"))
 
         html(ui.section_title("Todas as oportunidades", len(df)))
-        table = df[["lead_im", "collected_at", "published_at", "category", "vertical", "ufs", "potential", "demand", "prazo",
+        table = df[["lead_im", "nota", "faixa", "motivos", "collected_at", "published_at", "category", "vertical", "ufs",
+                     "potential", "demand", "prazo",
                      "title", "summary", "source", "url", "term", "engine", "signal_type", "impacto", "times_seen",
                      "entrada", "fase", "executor", "ficha_origem"]]
         d1, d2, _ = st.columns([1, 1, 3])
@@ -439,6 +456,8 @@ with tab_hist:
                 table, hide_index=True, width="stretch",
                 column_config={
                     "url": st.column_config.LinkColumn("URL"), "lead_im": "Lead IM",
+                    "nota": st.column_config.NumberColumn("Nota", format="%.1f"), "faixa": "Faixa",
+                    "motivos": "Por que a nota",
                     "collected_at": "Coleta", "published_at": "Publicação", "category": "Tema",
                     "potential": "Potencial", "title": "Título", "source": "Fonte", "term": "Termo",
                     "engine": "Mecanismo", "times_seen": "Vezes vista", "entrada": "Entrada da Cordeiro",
@@ -600,6 +619,22 @@ with tab_cfg:
         cfg["excluir_se_contiver"] = [w.strip() for w in excl.splitlines() if w.strip()]
         config.save_config(cfg)
         st.success(f"Configuração salva: {len(rows)} termos em {len(temas)} temas.")
+
+    st.markdown("#### Nota da notícia (0 a 10)")
+    st.caption("Chance de a notícia virar relacionamento e demanda para a Cordeiro. Cada critério vale até o seu "
+               "peso; os pesos são reescalados para somar 10. Notícias com mais de 60 dias perdem 0,5 ponto e com "
+               "mais de 120 dias, 1 ponto. Faixas: Quente ≥ 8 · Morna ≥ 6 · Fria ≥ 4 · Baixa < 4.")
+    with st.form("nota_pesos"):
+        saved = (config.load_config().get("nota") or {}).get("pesos") or {}
+        cols = st.columns(len(score.CRITERIA))
+        new_w = {k: col.number_input(label, 0.0, 10.0, float(saved.get(k, default)), 0.5, key=f"peso_{k}")
+                 for col, (k, (label, default)) in zip(cols, score.CRITERIA.items())}
+        if st.form_submit_button("Salvar pesos da nota"):
+            cfg_w = config.load_config()
+            cfg_w["nota"] = {"pesos": new_w}
+            config.save_config(cfg_w)
+            refresh()
+            st.success(f"Pesos salvos (soma {sum(new_w.values()):g}, reescalada para 10).")
 
     st.markdown("#### Fichas do executivo pesquisadas")
     st.caption("Importe o HTML da newsletter (versão integrada) para trazer as notícias com a Ficha do executivo "

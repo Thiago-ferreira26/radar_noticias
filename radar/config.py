@@ -70,6 +70,8 @@ DEFAULTS = {
     # Fontes diretas por RSS (sem custo de API): [{nome, url, tema, ativo}]
     "fontes_rss": [],
     "rss": {"dias_retroativos": 14},
+    # Nota 0–10 (radar/score.py): peso máximo de cada critério; os pesos são reescalados para somar 10.
+    "nota": {"pesos": {"demanda": 2.5, "fase": 2.5, "regiao": 1.5, "contato": 1.5, "porte": 1.0, "prazo": 1.0}},
     "fontes_nao_incluidas": [],  # avaliadas e não usadas como feed: [{nome, url, motivo}]
     "temas": [],
 }

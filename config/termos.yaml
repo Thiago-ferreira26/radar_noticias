@@ -38,6 +38,10 @@ fontes_nao_incluidas:
   - {nome: CanalEnergia, url: "https://www.canalenergia.com.br", motivo: "Feed do site vazio; notícias chegam pelas buscas"}
   - {nome: Diário do Pará, url: "https://diariodopara.com.br", motivo: "Feed geral político e sem feed de economia; coberto por buscas direcionadas (site:) no DuckDuckGo"}
   - {nome: Poder360, url: "https://www.poder360.com.br", motivo: "Feed geral político e feeds de Infra/Energia/Economia vazios; coberto por buscas direcionadas (site:)"}
+# Nota 0–10 de cada notícia (chance de virar relacionamento e demanda): peso máximo de cada critério.
+# Os pesos são reescalados para somar 10. Também editável na aba "Configuração".
+nota:
+  pesos: {demanda: 2.5, fase: 2.5, regiao: 1.5, contato: 1.5, porte: 1.0, prazo: 1.0}
 classificacao:
   ufs_prioritarias: [CE, PA]
   ufs_atuacao: [MA, PI, RN, PB, PE, AL, SE, BA]
