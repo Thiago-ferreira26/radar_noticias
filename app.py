@@ -308,18 +308,22 @@ with tab_day:
     if news.empty:
         html(ui.empty("Nenhuma notícia na base ainda. Execute a primeira coleta na aba “Coleta e logs”."))
     else:
-        # "Mais antigas" = notícias já enviadas em newsletter; as outras duas opções mostram a última coleta.
+        # "Mais antigas" = notícias já enviadas em newsletter; "Todas" = painel inteiro; as outras mostram a última coleta.
         current = news[~news["antiga"]]
         days = sorted(current["collected_day"].unique(), reverse=True) or [today_key]
         day = today_key if today_key in days else days[0]
         label = "hoje" if day == today_key else "última coleta com resultados"
         c_cap, c_ord = st.columns([4, 1], vertical_alignment="center")
-        order = c_ord.selectbox("Ordenar", ["Mais recentes", "Maior potencial", "Mais antigas"],
+        order = c_ord.selectbox("Ordenar", ["Mais recentes", "Maior potencial", "Mais antigas", "Todas"],
                                 key="day_order", label_visibility="collapsed")
         if order == "Mais antigas":
             c_cap.caption(f"Notícias já enviadas na newsletter ({int(news['antiga'].sum())}), agrupadas por tema, "
                           "das mais antigas para as mais novas.")
             base = news[news["antiga"]]
+        elif order == "Todas":
+            c_cap.caption(f"Todas as notícias do painel ({len(news)}), agrupadas por tema, das mais novas para as "
+                          "mais antigas.")
+            base = news
         else:
             c_cap.caption(f"Notícias coletadas em **{ui.fmt_date(day)}** ({label}), agrupadas por tema e ordenadas por "
                           f"{'data' if order == 'Mais recentes' else 'potencial'}.")
@@ -398,7 +402,7 @@ with tab_hist:
             base = base[base["ficha_origem"].isin(origens)]
         df = newsletter_filters(base, "hist")
 
-        sort = st.selectbox("Ordenar", ["Mais recentes", "Maior potencial", "Mais antigas"], label_visibility="collapsed")
+        sort = st.selectbox("Ordenar", ["Mais recentes", "Maior potencial", "Mais antigas", "Todas"], label_visibility="collapsed")
         if sort == "Maior potencial":
             df = df.sort_values(["pot_rank", "sort_date"], ascending=[True, False])
         else:
