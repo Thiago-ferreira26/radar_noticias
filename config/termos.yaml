@@ -23,6 +23,19 @@ rss:
   dias_retroativos: 14
 fontes_rss:
   - {nome: Brasil Mineral, url: "https://brasilmineral.com.br/feed/", tema: Mineração, ativo: true}
+  - {nome: InfraNews, url: "https://infranews.com.br/feed/", tema: Infraestrutura, ativo: true}
+  - {nome: BVMI, url: "https://bvmi.com.br/feed/", tema: Industrial, ativo: true}
+  # Movimento Econômico: feeds por editoria (o feed geral mistura política, consumo e turismo)
+  - {nome: Movimento Econômico, url: "https://movimentoeconomico.com.br/economia/portos/feed/", tema: Portos, ativo: true}
+  - {nome: Movimento Econômico, url: "https://movimentoeconomico.com.br/economia/energia/feed/", tema: Energia, ativo: true}
+  - {nome: Movimento Econômico, url: "https://movimentoeconomico.com.br/economia/infraestrutura/feed/", tema: Infraestrutura, ativo: true}
+  - {nome: Movimento Econômico, url: "https://movimentoeconomico.com.br/economia/industria-empresas/feed/", tema: Industrial, ativo: true}
+# Fontes avaliadas e não incluídas como feed (aparecem na janela "Fontes de dados" do painel).
+fontes_nao_incluidas:
+  - {nome: Valor Econômico, url: "https://valor.globo.com", motivo: "Feed geral (política, varejo…), quase só ruído; notícias chegam pelas buscas"}
+  - {nome: Exame (Melhores e Maiores), url: "https://exame.com", motivo: "Feed geral, poucas notícias aproveitáveis; chegam pelas buscas"}
+  - {nome: Nordeste Investing, url: "https://nordesteinvesting.com.br", motivo: "Feed do site com erro (HTTP 500); notícias chegam pelas buscas"}
+  - {nome: CanalEnergia, url: "https://www.canalenergia.com.br", motivo: "Feed do site vazio; notícias chegam pelas buscas"}
 classificacao:
   ufs_prioritarias: [CE, PA]
   ufs_atuacao: [MA, PI, RN, PB, PE, AL, SE, BA]

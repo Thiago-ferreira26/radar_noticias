@@ -84,6 +84,19 @@ fica bloqueado por 5 minutos naquela sessão.
 Usuário e senha ficam em `ADMIN_USER` e `ADMIN_PASSWORD`, no `.env` ou nos Secrets do Streamlit
 Cloud, e nunca no código. Sem essas variáveis, ninguém consegue entrar como administrador.
 
+### Fontes de dados
+
+O botão **🔍 Fontes de dados**, no topo, abre a lista de tudo o que a coleta consulta:
+- os mecanismos de busca (Exa, Firecrawl e DuckDuckGo), com limite e uso do dia;
+- as fontes diretas por RSS;
+- as fichas da newsletter e a inclusão manual;
+- os termos de busca por tema;
+- os sites que mais geraram notícias;
+- as fontes avaliadas e não incluídas, com o motivo (`fontes_nao_incluidas` no `config/termos.yaml`);
+- a última coleta.
+
+O botão aparece para todos. Mostra só nomes e endereços públicos.
+
 ### Incluir notícia por link
 
 Na aba **Coleta e logs** (administrador), cole o link de uma matéria, por exemplo uma recebida por
@@ -336,7 +349,10 @@ Coleta avulsa pela linha de comando:
      com rodízio diário.
    - **Chave:** `FIRECRAWL_API_KEY`, no `.env` ou nos Secrets.
 3. **Fontes diretas por RSS**, sem custo de API: lidas a cada coleta, com as notícias dos últimos 14
-   dias. Hoje: **Brasil Mineral** (`https://brasilmineral.com.br/feed/`). Para acrescentar um site,
+   dias. Hoje: **Brasil Mineral**, **InfraNews**, **BVMI** e 4 editorias do **Movimento Econômico**
+   (Portos, Energia, Infraestrutura, Indústria & Empresas). Avaliadas e não incluídas: Valor e Exame
+   (feed geral, quase só ruído, e já chegam pelas buscas), Nordeste Investing (feed com erro) e
+   CanalEnergia (feed vazio). Para acrescentar um site,
    inclua em `fontes_rss` no `config/termos.yaml`, por exemplo
    `{nome: Nome do site, url: "https://site/feed/", tema: Mineração, ativo: true}`. Para ler só os
    feeds, sem gastar cota de Exa e Firecrawl: `python -m radar.collector --rss`.

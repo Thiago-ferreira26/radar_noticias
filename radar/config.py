@@ -70,6 +70,7 @@ DEFAULTS = {
     # Fontes diretas por RSS (sem custo de API): [{nome, url, tema, ativo}]
     "fontes_rss": [],
     "rss": {"dias_retroativos": 14},
+    "fontes_nao_incluidas": [],  # avaliadas e não usadas como feed: [{nome, url, motivo}]
     "temas": [],
 }
 

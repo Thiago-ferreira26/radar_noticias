@@ -58,7 +58,8 @@ CRANE_KW = ["obra", "constru", "implant", "instala", "fabrica", "usina", "parque
 LOW_KW = ["regulament", "resolucao", "aneel aprova reajuste", "tarifa", "bolsa de valores", "dividendos",
           "cotacao", "inflacao", "selic", "artigo de opiniao", "artigo:", "podcast",
           # notícias corporativas/de mercado sem obra (comuns em portais setoriais como o Brasil Mineral)
-          "vagas de estagio", "premio", "premiada", "premiado", "seminario", "webinar", "perspectiva",
+          "vagas de estagio", "premio", "premiada", "premiado", "seminario", "webinar", "eleva perspectiva",
+          "rebaixa perspectiva", "perspectiva positiva", "perspectiva negativa",
           "rating", "ebitda", "trimestre", "bonds", "capta r", "capta us", "rodada pre", "rodada de investimento",
           "consultores", "acoes da", "acoes sobem", "acoes caem", "acoes disparam"]
 PENDING_KW = ["estudo", "estuda", "avalia", "planeja", "pretende", "preve", "previsto", "consulta publica",
