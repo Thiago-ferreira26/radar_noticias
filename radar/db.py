@@ -182,7 +182,8 @@ EXTRA_COLUMNS = [("news", "manual_class", "INTEGER DEFAULT 0"),  # 1 = classific
                  ("runs", "firecrawl_used", "INTEGER DEFAULT 0"),
                  ("crm_leads", "obra_cod", "TEXT"),  # lead criado a partir de uma obra do Mapa de Obras
                  ("news", "duplicate_of", "INTEGER"),  # id da notícia principal, se for repetida (dedupe.py)
-                 ("news", "duplicate_manual", "INTEGER")]  # repetida marcada à mão (prevalece sobre a regra)
+                 ("news", "duplicate_manual", "INTEGER"),  # repetida marcada à mão (prevalece sobre a regra)
+                 ("news", "antiga", "INTEGER DEFAULT 0")]  # 1 = já enviada em newsletter (filtro "Mais antigas")
 # Ordem de cópia/criação respeitando as chaves estrangeiras.
 TABLES = ["runs", "searches", "news", "dossiers", "accounts", "exa_usage", "api_usage", "news_images",
           "image_blocklist", "crm_leads", "obras", "obras_imports", "errors"]

@@ -41,6 +41,7 @@ def load_news() -> pd.DataFrame:
     df["uf_list"] = df["ufs"].fillna("").str.split(",")
     df["relevante"] = df["demand"].map(has_relation).astype(bool)
     df["repetida"] = df["duplicate_of"].notna() if "duplicate_of" in df else False  # mesma notícia em outro site
+    df["antiga"] = df["antiga"].fillna(0).astype(bool) if "antiga" in df else False  # já enviada em newsletter
     df["lead_im"] = [ui.im_code(r) for r in df.to_dict("records")]
     # Ficha do executivo: pesquisada (importada da newsletter) ou preliminar gerada pelo roteiro padrão.
     researched = dossier.get_dossiers()
@@ -307,15 +308,30 @@ with tab_day:
     if news.empty:
         html(ui.empty("Nenhuma notícia na base ainda. Execute a primeira coleta na aba “Coleta e logs”."))
     else:
-        days = sorted(news["collected_day"].unique(), reverse=True)
+        # "Mais antigas" = notícias já enviadas em newsletter; as outras duas opções mostram a última coleta.
+        current = news[~news["antiga"]]
+        days = sorted(current["collected_day"].unique(), reverse=True) or [today_key]
         day = today_key if today_key in days else days[0]
         label = "hoje" if day == today_key else "última coleta com resultados"
-        st.caption(f"Notícias coletadas em **{ui.fmt_date(day)}** ({label}), agrupadas por tema e ordenadas por potencial.")
-        df_day = newsletter_filters(news[news["collected_day"] == day], "day")
+        c_cap, c_ord = st.columns([4, 1], vertical_alignment="center")
+        order = c_ord.selectbox("Ordenar", ["Mais recentes", "Maior potencial", "Mais antigas"],
+                                key="day_order", label_visibility="collapsed")
+        if order == "Mais antigas":
+            c_cap.caption(f"Notícias já enviadas na newsletter ({int(news['antiga'].sum())}), agrupadas por tema, "
+                          "das mais antigas para as mais novas.")
+            base = news[news["antiga"]]
+        else:
+            c_cap.caption(f"Notícias coletadas em **{ui.fmt_date(day)}** ({label}), agrupadas por tema e ordenadas por "
+                          f"{'data' if order == 'Mais recentes' else 'potencial'}.")
+            base = current[current["collected_day"] == day]
+        df_day = newsletter_filters(base, "day")
         n_low = int((df_day["potential"] == "Baixo").sum())
         if n_low and st.toggle(f"Ocultar potencial Baixo ({n_low})", value=True, key="day_hide_low"):
             df_day = df_day[df_day["potential"] != "Baixo"]
-        df_day = df_day.sort_values(["pot_rank", "sort_date"], ascending=[True, False])
+        if order == "Maior potencial":
+            df_day = df_day.sort_values(["pot_rank", "sort_date"], ascending=[True, False])
+        else:
+            df_day = df_day.sort_values("sort_date", ascending=order == "Mais antigas")
         if df_day.empty:
             html(ui.empty("Nenhuma notícia para os filtros escolhidos."))
         ordered = CATEGORIES + sorted(set(df_day["category"].dropna()) - set(CATEGORIES))
@@ -579,9 +595,10 @@ with tab_cfg:
     n_fichas = int((news["ficha_origem"] == "newsletter").sum()) if len(news) else 0
     st.caption(f"Na base hoje: **{n_fichas}** fichas pesquisadas e **{len(load_accounts())}** contas com canal oficial.")
     upload = st.file_uploader("HTML da newsletter", type=["html", "htm"])
+    as_old = st.checkbox("Newsletter já enviada: colocar as notícias em “Mais antigas”", value=True)
     if upload is not None and st.button("Importar fichas"):
         try:
-            result = dossier.import_newsletter(upload.getvalue().decode("utf-8"))
+            result = dossier.import_newsletter(upload.getvalue().decode("utf-8"), antigas=as_old)
         except ValueError as exc:
             st.error(str(exc))
         else:

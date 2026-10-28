@@ -228,8 +228,9 @@ DOSSIER_FIELDS = ("priority", "phase", "phaseDetail", "executor", "entry", "need
                   "questions", "message", "gaps", "followup", "checked", "sources", "client", "action", "next", "days")
 
 
-def import_newsletter(html: str) -> dict:
-    """Importa notícias, fichas e contas do HTML da newsletter. A classificação do analista prevalece."""
+def import_newsletter(html: str, antigas: bool = False) -> dict:
+    """Importa notícias, fichas e contas do HTML da newsletter. A classificação do analista prevalece.
+    antigas=True: newsletter já enviada; as notícias vão para o filtro "Mais antigas" do painel."""
     db.init_db()
     docs = _embedded_json(html, "__SNAPSHOT_DOCS__")
     if not docs:
@@ -266,7 +267,8 @@ def import_newsletter(html: str) -> dict:
             stats["noticias_atualizadas"] += 1
         manual = ("category", "vertical", "ufs", "potential", "demand", "prazo", "signal_type", "impacto")
         with db.connect() as conn:
-            conn.execute(f"UPDATE news SET {', '.join(f + '=?' for f in manual)}, manual_class=1 WHERE url=?",
+            conn.execute(f"UPDATE news SET {', '.join(f + '=?' for f in manual)}, manual_class=1"
+                         f"{', antiga=1' if antigas else ''} WHERE url=?",
                          (*(item[f] for f in manual), url))
             if d.get("phase"):
                 ficha = {k: d.get(k) for k in DOSSIER_FIELDS} | {"origin": "newsletter", "newsletter_id": d.get("id")}
@@ -279,8 +281,9 @@ def import_newsletter(html: str) -> dict:
 
 
 def main() -> None:
-    path = Path(sys.argv[1] if len(sys.argv) > 1 else config.BASE_DIR / "radar-cordeiro-relatorio-NEWSLETTER-integrado.html")
-    print(import_newsletter(path.read_text(encoding="utf-8")))
+    args = [a for a in sys.argv[1:] if a != "--antigas"]
+    path = Path(args[0] if args else config.BASE_DIR / "radar-cordeiro-relatorio-NEWSLETTER-integrado.html")
+    print(import_newsletter(path.read_text(encoding="utf-8"), antigas="--antigas" in sys.argv))
 
 
 if __name__ == "__main__":
