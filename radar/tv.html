@@ -60,7 +60,7 @@
     font-size:calc(var(--u)*4.4); line-height:1.02;}
   .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:calc(var(--u)*1.4);}
   .kpi{background:rgba(238,244,242,.05); border:1px solid rgba(238,244,242,.14); border-radius:calc(var(--u)*1);
-    padding:calc(var(--u)*1.6) calc(var(--u)*1.8);}
+    padding:calc(var(--u)*1.2) calc(var(--u)*1.8);}
   .kpi b{display:block; font-family:"IBM Plex Mono"; font-weight:600; font-size:calc(var(--u)*4.6); line-height:1;
     font-variant-numeric:tabular-nums;}
   .kpi b.sm{font-size:calc(var(--u)*3.4); padding:calc(var(--u)*0.6) 0;}
@@ -70,10 +70,10 @@
   .split{display:grid; grid-template-columns:1fr 1fr; column-gap:calc(var(--u)*3); row-gap:calc(var(--u)*1.2);
     align-content:start; flex:1; min-height:0;}
   .ufs{display:grid; grid-template-columns:1fr 1fr; column-gap:calc(var(--u)*3);}
-  .panel h3{margin:0 0 calc(var(--u)*1.1); font-family:"IBM Plex Sans Condensed"; text-transform:uppercase;
+  .panel h3{margin:0 0 calc(var(--u)*0.8); font-family:"IBM Plex Sans Condensed"; text-transform:uppercase;
     letter-spacing:.05em; font-size:calc(var(--u)*1.35); color:#a9bfba;}
   .barrow{display:grid; grid-template-columns:calc(var(--u)*15) 1fr calc(var(--u)*3.5); align-items:center;
-    gap:calc(var(--u)*1); margin-bottom:calc(var(--u)*0.9);}
+    gap:calc(var(--u)*1); margin-bottom:calc(var(--u)*0.5);}
   .barrow .lbl{font-size:calc(var(--u)*1.4); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .barrow .trk{height:calc(var(--u)*1.6); background:rgba(238,244,242,.07); border-radius:calc(var(--u)*0.4); overflow:hidden;}
   .barrow .trk i{display:block; height:100%; border-radius:calc(var(--u)*0.4);}
@@ -81,6 +81,17 @@
 
   /* oportunidade */
   .top{display:flex; align-items:center; gap:calc(var(--u)*0.8); flex-wrap:wrap;}
+  .op .top{flex-wrap:nowrap; align-items:flex-start; justify-content:space-between; gap:calc(var(--u)*1.6);}
+  .tags{display:flex; align-items:center; gap:calc(var(--u)*0.8); flex-wrap:wrap;}
+  .nota{flex:none; display:flex; align-items:center; gap:calc(var(--u)*0.9); padding:calc(var(--u)*0.4)
+    calc(var(--u)*1.3) calc(var(--u)*0.4) calc(var(--u)*0.9); border-radius:calc(var(--u)*0.9);
+    border:2px solid var(--c); background:color-mix(in srgb, var(--c) 22%, transparent);}
+  .nota b{font-family:"IBM Plex Mono"; font-size:calc(var(--u)*3.2); line-height:1; color:#fff;}
+  .nota span{display:flex; flex-direction:column; font-size:calc(var(--u)*1.05); color:#cfdcd9; line-height:1.25;}
+  .nota em{font-style:normal; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+    font-size:calc(var(--u)*1.2); color:#fff;}
+  .why{font-size:calc(var(--u)*1.25); color:#a9bfba; margin-top:calc(var(--u)*-0.6);}
+  .why b{color:var(--amber-l);}
   .tag{font-size:calc(var(--u)*1.15); padding:calc(var(--u)*0.35) calc(var(--u)*1); border-radius:999px; font-weight:700;
     text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; background:rgba(238,244,242,.1); color:#eef4f2;}
   .tag.vert{background:transparent; border:2px solid currentColor; filter:brightness(1.7);}
@@ -169,20 +180,24 @@ __NO_TRANSLATE__
       '<div class="kpi hl"><b>'+c.high+'</b><span>Alta prioridade</span></div>'+
       '<div class="kpi"><b>'+c["new"]+'</b><span>Novos na semana</span></div>'+
       '<div class="kpi"><b class="sm">'+esc(c.updated)+'</b><span>Última atualização</span></div></div>'+
-      '<div class="split"><div class="panel"><h3>Por potencial</h3>'+bars(c.by_potential)+'</div>'+
+      '<div class="split">'+(c.by_nota ? '<div class="panel"><h3>Por nota (chance de negócio)</h3>'+bars(c.by_nota)+'</div>' : '')+
+      '<div class="panel"><h3>Por potencial</h3>'+bars(c.by_potential)+'</div>'+
       '<div class="panel"><h3>Por vertical</h3>'+bars(c.by_vertical)+'</div>'+
-      (c.by_uf.length ? '<div class="panel" style="grid-column:1/-1"><h3>Estados com mais sinais</h3><div class="ufs">'+bars(c.by_uf)+'</div></div>' : '')+
+      (c.by_uf.length ? '<div class="panel"><h3>Estados com mais sinais</h3>'+bars(c.by_uf)+'</div>' : '')+
       '</div></div>';
   }
   function opHTML(d){
     var imgs = (d.images||[]).map(function(u){ return '<img src="'+esc(u)+'" alt="" onerror="this.remove()">'; }).join("");
     var ufs = d.ufs.map(function(u){ return '<span class="tag uf">'+esc(u)+'</span>'; }).join("");
-    return '<div class="op" style="display:contents"><div class="top">'+
+    return '<div class="op" style="display:contents"><div class="top"><div class="tags">'+
       '<span class="tag '+potCls(d.potential)+'">Potencial '+esc(d.potential)+'</span>'+
       (d.isNew ? '<span class="tag new">Novo na semana</span>' : '')+
       (d.vertical ? '<span class="tag vert" style="color:'+d.vertColor+'">'+esc(d.vertical)+'</span>' : '')+
       (d.category ? '<span class="tag">'+esc(d.category)+'</span>' : '')+ufs+'</div>'+
+      (d.nota ? '<span class="nota" style="--c:'+d.notaColor+'"><b>'+esc(d.nota)+'</b><span><em>'+esc(d.faixa)+
+        '</em>Nota 0–10</span></span>' : '')+'</div>'+
       '<h2>'+esc(d.title)+'</h2>'+
+      (d.motivos ? '<div class="why"><b>Por que a nota:</b> '+esc(d.motivos)+'</div>' : '')+
       '<div class="body'+(imgs ? ' with-img' : '')+'">'+
         (imgs ? '<div class="imgs'+(d.images.length > 1 ? ' two' : '')+'">'+imgs+'</div>' : '<p class="sum">'+esc(d.summary)+'</p>')+
         '<div class="text">'+(imgs ? '<p class="sum">'+esc(d.summary)+'</p>' : '')+

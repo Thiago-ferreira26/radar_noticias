@@ -234,8 +234,9 @@ Abra http://localhost:8501/tv no navegador da TV, ou use o link "Abrir Modo TV" 
 carrossel 16:9 em tela cheia, pensado para a TV de 43" em Full HD:
 
 - **Conteúdo:** a capa com indicadores e **todas as notícias da base**, cada uma com até 2 imagens,
-  impacto e entrada da Cordeiro. A ordem é: novas da semana primeiro, depois por potencial
-  (Muito Alto → Baixo), depois a mais recente.
+  impacto, entrada da Cordeiro e a **nota 0–10** (selo no canto, com "Por que a nota" abaixo do título).
+  A ordem é: novas da semana primeiro, depois pela nota (maior → menor), depois a mais recente. A capa
+  mostra também a distribuição por nota (Quente, Morna, Fria, Baixa).
 - **Capa:** reaparece a cada 30 notícias, e os dados são recarregados nessas passagens (a cada 10
   minutos ou mais). A recarga **continua da notícia seguinte à última exibida**; não volta para o
   início. Assim a TV percorre a base inteira, e a lista é refeita só ao terminar a volta.
