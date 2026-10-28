@@ -264,7 +264,8 @@ def sources_dialog() -> None:
 # ------------------------------------------------------------------ cabeçalho
 all_news = load_news()
 # Notícias sem relação com a Cordeiro (demanda "Não") ficam fora das telas; o Histórico do admin pode mostrá-las.
-news = all_news[all_news["relevante"] & ~all_news["repetida"]]
+# Exceção: as já enviadas na newsletter aparecem todas em "Mais antigas", mesmo com demanda "Não".
+news = all_news[(all_news["relevante"] | all_news["antiga"]) & ~all_news["repetida"]]
 n_sem_relacao = int((~all_news["relevante"]).sum()) if len(all_news) else 0
 n_repetidas = int((all_news["relevante"] & all_news["repetida"]).sum()) if len(all_news) else 0
 runs = load_runs()
@@ -314,7 +315,10 @@ with tab_day:
         day = today_key if today_key in days else days[0]
         label = "hoje" if day == today_key else "última coleta com resultados"
         c_cap, c_ord = st.columns([4, 1], vertical_alignment="center")
-        order = c_ord.selectbox("Ordenar", ["Mais recentes", "Maior potencial", "Mais antigas", "Todas"],
+        n_day = int((current["collected_day"] == day).sum())
+        totals = {"Mais recentes": n_day, "Maior potencial": n_day, "Mais antigas": int(news["antiga"].sum()),
+                  "Todas": len(news)}
+        order = c_ord.selectbox("Ordenar", list(totals), format_func=lambda o: f"{o} ({totals[o]})",
                                 key="day_order", label_visibility="collapsed")
         if order == "Mais antigas":
             c_cap.caption(f"Notícias já enviadas na newsletter ({int(news['antiga'].sum())}), agrupadas por tema, "
