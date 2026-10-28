@@ -69,9 +69,11 @@ def _store_results(results, term, engine, run_id, cfg, image_jobs: list) -> int:
     return new
 
 
-def run_collection(trigger: str = "manual", progress=None, only_feeds: bool = False) -> dict:
+def run_collection(trigger: str = "manual", progress=None, only_feeds: bool = False,
+                   only_terms: list[str] | None = None) -> dict:
     """Executa uma coleta completa. `progress(fração, mensagem)` é opcional (usado pelo Streamlit).
-    only_feeds=True: só as fontes RSS (sem gastar cota de Exa/Firecrawl e sem DuckDuckGo)."""
+    only_feeds=True: só as fontes RSS (sem gastar cota de Exa/Firecrawl e sem DuckDuckGo).
+    only_terms=[...]: só esses termos, só no DuckDuckGo (gratuito) — ex.: buscas direcionadas a um site."""
     setup_logging()
     db.init_db()
     cfg = config.load_config()
@@ -120,6 +122,10 @@ def run_collection(trigger: str = "manual", progress=None, only_feeds: bool = Fa
         ddg_terms = list(terms)
         if only_feeds:
             exa_terms, fc_terms, ddg_terms = [], [], []
+        if only_terms is not None:
+            wanted = {t.strip().lower() for t in only_terms}
+            exa_terms, fc_terms, feeds = [], [], []
+            ddg_terms = [t for t in terms if t["texto"].strip().lower() in wanted]
 
         total_steps = len(exa_terms) + len(fc_terms) + len(feeds) + len(ddg_terms) or 1
         step = 0

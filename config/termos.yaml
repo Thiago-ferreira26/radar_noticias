@@ -36,6 +36,8 @@ fontes_nao_incluidas:
   - {nome: Exame (Melhores e Maiores), url: "https://exame.com", motivo: "Feed geral, poucas notícias aproveitáveis; chegam pelas buscas"}
   - {nome: Nordeste Investing, url: "https://nordesteinvesting.com.br", motivo: "Feed do site com erro (HTTP 500); notícias chegam pelas buscas"}
   - {nome: CanalEnergia, url: "https://www.canalenergia.com.br", motivo: "Feed do site vazio; notícias chegam pelas buscas"}
+  - {nome: Diário do Pará, url: "https://diariodopara.com.br", motivo: "Feed geral político e sem feed de economia; coberto por buscas direcionadas (site:) no DuckDuckGo"}
+  - {nome: Poder360, url: "https://www.poder360.com.br", motivo: "Feed geral político e feeds de Infra/Energia/Economia vazios; coberto por buscas direcionadas (site:)"}
 classificacao:
   ufs_prioritarias: [CE, PA]
   ufs_atuacao: [MA, PI, RN, PB, PE, AL, SE, BA]
@@ -121,3 +123,13 @@ temas:
       - {texto: obras Ceará investimento, prioridade: 2}
       - {texto: obras Pará investimento, prioridade: 3}
       - {texto: concessão infraestrutura Nordeste, prioridade: 3}
+  - nome: Buscas direcionadas
+    termos:
+      # Sites sem feed útil (feed geral político ou editorias vazias): busca restrita ao site.
+      - {texto: "site:diariodopara.com.br mineração", prioridade: 3}
+      - {texto: "site:diariodopara.com.br obras investimento", prioridade: 3}
+      - {texto: "site:diariodopara.com.br energia usina", prioridade: 3}
+      - {texto: "site:diariodopara.com.br porto Barcarena", prioridade: 3}
+      - {texto: "site:poder360.com.br infraestrutura obras", prioridade: 3}
+      - {texto: "site:poder360.com.br leilão porto rodovia", prioridade: 3}
+      - {texto: "site:poder360.com.br energia transmissão usina", prioridade: 3}

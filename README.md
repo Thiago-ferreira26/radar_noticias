@@ -356,6 +356,12 @@ Coleta avulsa pela linha de comando:
    inclua em `fontes_rss` no `config/termos.yaml`, por exemplo
    `{nome: Nome do site, url: "https://site/feed/", tema: Mineração, ativo: true}`. Para ler só os
    feeds, sem gastar cota de Exa e Firecrawl: `python -m radar.collector --rss`.
+   - **Sites sem feed útil**: são cobertos por **buscas direcionadas** no tema "Buscas
+     direcionadas" do `termos.yaml` (`site:diariodopara.com.br mineração`,
+     `site:poder360.com.br infraestrutura obras`…). É o caso do Diário do Pará e do Poder360, cujos
+     feeds são de política e cujas editorias de economia não têm feed.
+   - **Rodar só alguns termos** no DuckDuckGo, sem Exa, Firecrawl e feeds:
+     `run_collection("manual", only_terms=[...])`.
 4. **DuckDuckGo** (biblioteca `ddgs`): busca de notícias para todos os termos ativos, com região
    `br-pt`, período configurável (dia, semana ou mês) e uma pausa entre buscas para evitar bloqueio.
 5. **Deduplicação**: a URL é normalizada (sem `utm_*`, fragmento ou barra final) e é única no banco.
