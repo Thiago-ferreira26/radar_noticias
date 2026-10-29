@@ -122,6 +122,12 @@ h1,h2,h3{font-family:"IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;}
 .rc-empty{padding:40px 20px; text-align:center; color:var(--ink-faint); font-size:14px; background:var(--surface);
   border:1px dashed var(--border); border-radius:12px;}
 
+/* Dados do CNPJ no botão do Bitrix */
+.rc-cnpj{display:grid; grid-template-columns:max-content 1fr; gap:3px 10px; margin:4px 0 6px; padding:8px 10px;
+  border:1px solid var(--border); border-radius:8px; background:var(--surface); font-size:12px; line-height:1.35}
+.rc-cnpj dt{color:var(--ink-soft); font-weight:600}
+.rc-cnpj dd{margin:0; color:var(--ink); min-width:0; overflow-wrap:anywhere}
+
 /* Nota 0–10: chance de virar relacionamento e demanda */
 .rc-nota{display:flex;gap:10px;align-items:center;margin:6px 0 8px;padding:6px 10px;border-radius:8px;
   border-left:4px solid var(--c);background:color-mix(in srgb, var(--c) 9%, transparent)}
@@ -319,6 +325,15 @@ def criteria() -> str:
         "</ol><p>Nas notícias coletadas automaticamente, estas regras são aplicadas por palavras-chave "
         "(triagem); nas fichas pesquisadas vale a nota do analista.</p></div></details>"
     )
+
+
+def company_card(res: dict) -> str:
+    """Resumo do CNPJ (OpenCNPJ) dentro do botão do Bitrix."""
+    rows = "".join(f"<dt>{h(k)}</dt><dd>{h(v)}</dd>" for k, v in res["campos"].items())
+    if res["socios"]:
+        extra = f" e mais {res['mais_socios']}" if res["mais_socios"] else ""
+        rows += f"<dt>Sócios/diretores</dt><dd>{h('; '.join(res['socios']))}{extra}</dd>"
+    return f'<dl class="rc-cnpj">{rows}</dl>'
 
 
 def nota_criteria(weights: dict[str, float]) -> str:

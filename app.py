@@ -10,7 +10,7 @@ from datetime import date, timedelta
 import pandas as pd
 import streamlit as st
 
-from radar import auth, config, crm, db, dossier, export, images, score, ui
+from radar import auth, cnpj, config, crm, db, dossier, export, images, score, ui
 from radar.collector import add_from_url, run_collection
 from radar.classify import CATEGORIES, has_relation
 
@@ -91,6 +91,34 @@ CARDS_PER_ROW = 3
 DAY_LIMIT = 12  # cards por tema na Visão do dia antes do botão "Mostrar todas"
 
 
+@st.cache_data(ttl=86400, show_spinner=False)
+def lookup_cnpj(numero: str) -> dict:
+    return cnpj.resumo(cnpj.consultar(numero))
+
+
+def company_lookup(key: str) -> dict | None:
+    """Consulta do CNPJ da empresa (OpenCNPJ) dentro do botão do Bitrix. Devolve o resumo a incluir no lead."""
+    st.markdown("**Empresa do lead (CNPJ)**")
+    c_in, c_bt = st.columns([3, 1.4], vertical_alignment="bottom")
+    numero = c_in.text_input("CNPJ da empresa", placeholder="00.000.000/0000-00", key=f"{key}_cnpj")
+    res_key = f"{key}_cnpj_res"
+    if c_bt.button("Consultar", key=f"{key}_cnpj_go", width="stretch", disabled=not numero.strip()):
+        try:
+            st.session_state[res_key] = lookup_cnpj(cnpj.limpar_cnpj(numero))
+        except (ValueError, LookupError) as exc:
+            st.session_state.pop(res_key, None)
+            st.warning(str(exc))
+        except Exception:  # rede ou API fora do ar
+            st.session_state.pop(res_key, None)
+            st.warning("Não foi possível consultar o CNPJ agora (OpenCNPJ indisponível). Tente de novo em instantes.")
+    res = st.session_state.get(res_key)
+    if not res:
+        st.caption("Opcional: informe o CNPJ do dono da obra ou da executora para levar os dados cadastrais ao lead.")
+        return None
+    html(ui.company_card(res))
+    return res if st.checkbox("Incluir os dados da empresa no lead", value=True, key=f"{key}_cnpj_inc") else None
+
+
 def crm_button(r: dict, key: str, sent: dict | None) -> None:
     """Botão do card: escolher o usuário do Bitrix, confirmar e criar o lead (crm.lead.add)."""
     label = f"✓ Enviado ao Bitrix · {sent['assigned_name']}" if sent else "Enviar para o Bitrix"
@@ -104,9 +132,10 @@ def crm_button(r: dict, key: str, sent: dict | None) -> None:
         user = st.selectbox("Responsável no Bitrix", crm.users(), index=None, format_func=lambda u: u["nome"],
                             placeholder="Selecione o usuário", key=f"{key}_user")
         st.caption(f"Título do lead: {r['title'][:120]}")
+        empresa = company_lookup(key)
         if st.button("Confirmar envio", type="primary", disabled=user is None, key=f"{key}_send", width="stretch"):
             with st.spinner("Enviando ao Bitrix…"):
-                res = crm.send_lead(r, r["ficha"], user)
+                res = crm.send_lead(r, r["ficha"], user, empresa=empresa)
             if res["ok"]:
                 # Recarrega a página para o card já mostrar o ID do lead e o responsável.
                 st.session_state["crm_flash"] = f"✅ {res['message']}"

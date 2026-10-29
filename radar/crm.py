@@ -13,7 +13,7 @@ from urllib.parse import urlsplit
 import requests
 import yaml
 
-from . import config, db
+from . import cnpj, config, db
 from .ui import UF_LABEL, fmt_date, im_code
 
 BITRIX_CFG = config.BASE_DIR / "config" / "bitrix.yaml"
@@ -101,11 +101,12 @@ def _create_lead(fields: dict, user: dict, record: dict, label: str) -> dict:
     return {"ok": ok, "lead_id": lead_id, "message": message}
 
 
-def send_lead(row: dict, ficha: dict, user: dict) -> dict:
-    """Cria o lead no Bitrix. Retorna {"ok": bool, "lead_id": int|None, "message": str}."""
+def send_lead(row: dict, ficha: dict, user: dict, empresa: dict | None = None) -> dict:
+    """Cria o lead no Bitrix. Retorna {"ok": bool, "lead_id": int|None, "message": str}.
+    empresa: resumo do CNPJ (radar.cnpj.resumo), acrescentado ao corpo do lead."""
     fields = {
         "TITLE": f"[{im_code(row)}] {row.get('title') or 'Oportunidade Radar Cordeiro'}"[:255],
-        "COMMENTS": build_body(row, ficha),
+        "COMMENTS": build_body(row, ficha) + (cnpj.bloco_lead(empresa) if empresa else ""),
         "ASSIGNED_BY_ID": int(user["id"]),
         "SOURCE_DESCRIPTION": f"Radar Cordeiro {im_code(row)} — {row.get('url') or ''}"[:255],
     }

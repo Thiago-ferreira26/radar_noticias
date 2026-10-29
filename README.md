@@ -199,6 +199,15 @@ escolher o responsável e clicar em **Confirmar envio**, o painel cria um lead v
 - **No card:** depois do envio, aparece a faixa **Lead no Bitrix**, com o ID do lead (o link abre o lead
   no Bitrix), o usuário responsável e a data do envio.
 
+### Empresa do lead (CNPJ)
+
+No botão **Enviar para o Bitrix**, o executivo pode informar o CNPJ do dono da obra ou da executora e
+clicar em **Consultar** (`radar/cnpj.py`, API pública OpenCNPJ, sem chave). O painel confere os dígitos
+verificadores e mostra razão social, situação, atividade principal, porte, capital social, abertura,
+endereço, telefone, e-mail e até 5 sócios/diretores. Com "Incluir os dados da empresa no lead" marcado,
+esses dados vão como texto no corpo do lead, depois do link da notícia (não criam a Companhia nem
+preenchem campos próprios no Bitrix). Consultas ficam em cache por 24 h.
+
 ### Lead IM (código de rastreio)
 
 Todo card tem um **Lead IM** no formato `IM-AAAA-NNNN`: o ano da coleta e o número da notícia na
