@@ -96,6 +96,16 @@ def workbook_bytes(docs: list[tuple[dict, dict]], accounts: dict) -> bytes:
     return _book_bytes(sheets)
 
 
+def leads_workbook_bytes(rows: list[list], period: str) -> bytes:
+    """Leads enviados ao Bitrix no período (aba Leads enviados do administrador)."""
+    return _book_bytes([
+        ("Leads enviados", "Radar Cordeiro — leads enviados ao Bitrix", f"Período: {period}.",
+         ["Enviado em", "Lead IM", "Notícia / projeto", "Nota", "Faixa", "Potencial", "UF", "Responsável",
+          "Lead no Bitrix", "Abrir lead", "Fonte da notícia"],
+         rows, [17, 14, 55, 8, 10, 12, 10, 24, 13, 14, 16], set()),
+    ])
+
+
 def obras_workbook_bytes(obras: list[dict]) -> bytes:
     """Excel do Mapa de Obras: aba Obras (com Responsável/Andamento para preencher) e aba Empresas."""
     rows, empresas = [], []
@@ -147,7 +157,7 @@ def _book_bytes(sheets: list) -> bytes:
                 v = "" if v is None else v
                 c = ws.cell(row=i, column=j + 1)
                 if isinstance(v, str) and URL_RE.match(v):
-                    c.value = "Ver fonte" if "Fonte" in headers[j] else "Abrir cadastro"
+                    c.value = ("Ver fonte" if "Fonte" in headers[j] else "Abrir lead" if "lead" in headers[j] else "Abrir cadastro")
                     c.hyperlink = v
                     c.font = Font(name="Arial", size=11, color=LINK, underline="single")
                 else:

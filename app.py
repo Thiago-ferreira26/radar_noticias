@@ -76,6 +76,11 @@ def load_sent() -> dict:
 
 
 @st.cache_data(ttl=30, show_spinner=False)
+def load_leads() -> pd.DataFrame:
+    return db.read_sql("SELECT * FROM crm_leads ORDER BY sent_at DESC")
+
+
+@st.cache_data(ttl=30, show_spinner=False)
 def load_runs(limit: int = 50) -> pd.DataFrame:
     return db.read_sql("SELECT * FROM runs ORDER BY id DESC LIMIT ?", (limit,))
 
@@ -85,6 +90,7 @@ def refresh() -> None:
     load_runs.clear()
     load_accounts.clear()
     load_sent.clear()
+    load_leads.clear()
 
 
 CARDS_PER_ROW = 3
@@ -140,6 +146,7 @@ def crm_button(r: dict, key: str, sent: dict | None) -> None:
                 # Recarrega a página para o card já mostrar o ID do lead e o responsável.
                 st.session_state["crm_flash"] = f"✅ {res['message']}"
                 load_sent.clear()
+                load_leads.clear()
                 st.rerun()
             else:
                 st.toast(f"❌ Não foi possível enviar: {res['message']}")
@@ -341,7 +348,8 @@ st.write("")
 
 # Executivos veem só a Visão do dia; Histórico, Coleta e logs e Configuração são da visão de administrador.
 if is_admin:
-    tab_day, tab_hist, tab_run, tab_cfg = st.tabs(["Visão do dia", "Histórico", "Coleta e logs", "Configuração"])
+    tab_day, tab_hist, tab_leads, tab_run, tab_cfg = st.tabs(
+        ["Visão do dia", "Histórico", "Leads enviados", "Coleta e logs", "Configuração"])
 else:
     tab_day = st.container()
 
@@ -503,6 +511,84 @@ with tab_hist:
             pages = max(1, -(-len(df) // page_size))
             page = st.number_input(f"Página (de {pages})", 1, pages, 1) if pages > 1 else 1
             render_cards(df.iloc[(page - 1) * page_size: page * page_size], new_day=today_key, key="hist")
+
+# ------------------------------------------------------------------ leads enviados
+with tab_leads:
+    leads = load_leads()
+    if leads.empty:
+        html(ui.empty("Nenhuma notícia enviada ao Bitrix ainda. Os envios aparecem aqui assim que um executivo "
+                      "usa o botão “Enviar para o Bitrix” de um card."))
+    else:
+        leads = leads.assign(dia=leads["sent_at"].str[:10])
+        monday = config.today() - timedelta(days=config.today().weekday())  # padrão: a semana atual
+        c1, c2, c3 = st.columns([2, 3, 2], vertical_alignment="bottom")
+        period = c1.date_input("Período", (monday, config.today()), format="DD/MM/YYYY", key="leads_period")
+        start, end = (period[0], period[-1]) if isinstance(period, (tuple, list)) and period else (monday, config.today())
+        people = c2.multiselect("Responsável", sorted(leads["assigned_name"].dropna().unique()), key="leads_people",
+                                placeholder="Todos os executivos")
+        with_errors = c3.toggle("Mostrar falhas de envio", key="leads_err")
+
+        sel = leads[(leads["dia"] >= start.isoformat()) & (leads["dia"] <= end.isoformat())]
+        if people:
+            sel = sel[sel["assigned_name"].isin(people)]
+        ok = sel[sel["status"] == "ok"]
+        info = all_news.set_index("id")[["title", "lead_im", "nota", "faixa", "potential", "ufs", "source"]]
+        ok = ok.join(info, on="news_id")
+        ok["title"] = ok["title"].fillna("Mapa de Obras · " + ok["obra_cod"].fillna("").astype(str))
+        ok["lead_im"] = ok["lead_im"].fillna(ok["obra_cod"])
+        ok["bitrix"] = ok["lead_id"].map(crm.lead_url)
+        label = f"{start:%d/%m/%Y} a {end:%d/%m/%Y}"
+
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Leads criados", len(ok))
+        m2.metric("Executivos", ok["assigned_name"].nunique())
+        m3.metric("Notícias diferentes", ok["news_id"].nunique())
+        m4.metric("Falhas no envio", int((sel["status"] != "ok").sum()))
+
+        if ok.empty:
+            html(ui.empty(f"Nenhum lead enviado de {label}."))
+        else:
+            g1, g2 = st.columns([3, 2])
+            with g1:
+                html(ui.section_title("Por executivo", ok["assigned_name"].nunique()))
+                by_person = (ok.groupby("assigned_name").agg(Leads=("id", "count"), Último=("sent_at", "max"))
+                             .sort_values("Leads", ascending=False).reset_index())
+                by_person["Último"] = by_person["Último"].map(lambda v: ui.fmt_date(v, True))
+                st.dataframe(by_person.rename(columns={"assigned_name": "Responsável"}), hide_index=True,
+                             width="stretch", column_config={"Leads": st.column_config.ProgressColumn(
+                                 "Leads", format="%d", min_value=0, max_value=int(by_person["Leads"].max()))})
+            with g2:
+                html(ui.section_title("Por dia", ok["dia"].nunique()))
+                by_day = ok.groupby("dia").size().rename("Leads").reset_index()
+                by_day["Dia"] = by_day["dia"].map(ui.fmt_date)
+                st.dataframe(by_day[["Dia", "Leads"]], hide_index=True, width="stretch")
+
+            html(ui.section_title(f"Leads enviados de {label}", len(ok)))
+            table = pd.DataFrame({
+                "Enviado em": ok["sent_at"].map(lambda v: ui.fmt_date(v, True)), "Lead IM": ok["lead_im"],
+                "Notícia": ok["title"], "Nota": ok["nota"], "Faixa": ok["faixa"], "Potencial": ok["potential"],
+                "UF": ok["ufs"].fillna("").str.replace(",", ", "), "Responsável": ok["assigned_name"],
+                "Lead": ok["lead_id"], "Abrir no Bitrix": ok["bitrix"], "Fonte": ok["source"],
+            })
+            st.dataframe(table, hide_index=True, width="stretch", column_config={
+                "Nota": st.column_config.NumberColumn("Nota", format="%.1f"),
+                "Lead": st.column_config.NumberColumn("Lead #", format="%d"),
+                "Abrir no Bitrix": st.column_config.LinkColumn("Abrir no Bitrix", display_text="abrir lead")})
+            st.download_button(
+                "Baixar Excel dos leads", key="leads_xlsx", on_click="ignore",
+                data=lambda t=table, p=label: export.leads_workbook_bytes(t.astype(object).where(t.notna(), "").values.tolist(), p),
+                file_name=f"radar-leads-enviados-{start:%Y%m%d}-{end:%Y%m%d}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+        if with_errors:
+            errs = sel[sel["status"] != "ok"]
+            html(ui.section_title("Falhas de envio", len(errs)))
+            if errs.empty:
+                st.caption("Nenhuma falha no período.")
+            else:
+                st.dataframe(pd.DataFrame({"Tentativa": errs["sent_at"].map(lambda v: ui.fmt_date(v, True)),
+                                           "Responsável": errs["assigned_name"], "Motivo": errs["message"]}),
+                             hide_index=True, width="stretch")
 
 # ------------------------------------------------------------------ coleta e logs
 with tab_run:
