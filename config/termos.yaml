@@ -113,6 +113,11 @@ temas:
     termos:
       - {texto: Margem Equatorial Petrobras, prioridade: 2}
       - {texto: gasoduto Nordeste, prioridade: 3}
+      # TGN – Terminal de Gás do Nordeste (JV Ultragaz + Supergasbras, GLP no Pecém): acompanhar EPC e obras
+      - {texto: Terminal de Gás do Nordeste, prioridade: 2}
+      - {texto: TGN Pecém, prioridade: 2}
+      - {texto: Ultragaz Supergasbras terminal, prioridade: 2}
+      - {texto: terminal GLP Pecém, prioridade: 2}
   - nome: Logística/Hidrovias
     termos:
       - {texto: Transnordestina obras, prioridade: 2}
