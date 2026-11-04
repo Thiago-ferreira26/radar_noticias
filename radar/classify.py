@@ -163,6 +163,10 @@ NEED_BY_TYPE = {
 ANY_CATEGORY_NEEDS = [
     (["iluminacao publica", "iluminacao led", "luminaria"],
      "Troca de postes e luminárias: serviço de caminhão munck, pouca demanda de guindaste."),
+    (["correia transportadora", "correias transportadoras", "correias para mineracao", "transportadores de correia",
+      "emenda de correia", "conveyor"],
+     "Içamento de bobinas de correia e troca de transportadores (guindaste e munck); possível cliente de serviço"
+     " recorrente."),
 ]
 
 
