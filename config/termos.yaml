@@ -99,6 +99,14 @@ excluir_se_contiver:
   - assume a presidência
   - toma posse
   - tomou posse
+  # vagas, concursos e cursos, sem obra ("empregos" sozinho fica de fora: aparece em anúncios de projetos)
+  - concurso
+  - concursos
+  - vagas de emprego
+  - vagas de empregos
+  - oportunidades de emprego
+  - estágios
+  - cursos gratuitos
 temas:
   - nome: Energia
     termos:
