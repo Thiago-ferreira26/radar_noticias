@@ -237,14 +237,36 @@ def reclassify_all() -> int:
     cfg = config.load_config()
     fields = ("category", "vertical", "ufs", "potential", "demand", "prazo", "signal_type", "impacto")
     with db.connect() as conn:
-        # Notícias classificadas pelo analista (importadas da newsletter) não são sobrescritas.
+        # Notícias classificadas pelo analista (newsletter) ou marcadas "sem relação" não são sobrescritas.
         rows = conn.execute(
-            "SELECT id, url, title, summary, theme FROM news WHERE COALESCE(manual_class, 0) = 0").fetchall()
+            "SELECT id, url, title, summary, theme FROM news "
+            "WHERE COALESCE(manual_class, 0) = 0 AND COALESCE(sem_relacao, 0) = 0").fetchall()
         for r in rows:
             c = classify.classify(r["title"], r["summary"], r["theme"], cfg, url=r["url"])
             conn.execute(f"UPDATE news SET {', '.join(f + '=?' for f in fields)} WHERE id=?",
                          (*(c[f] for f in fields), r["id"]))
     return len(rows)
+
+
+SEM_RELACAO_IMPACTO = "Marcada pelo administrador como sem relação com a Cordeiro."
+
+
+def set_sem_relacao(news_id: int, on: bool = True) -> None:
+    """Marca (ou desmarca) uma notícia como sem relação com a Cordeiro.
+
+    Marcada, fica com demanda "Não" (fora da Visão do dia e do Modo TV) e a reclassificação não a traz de volta.
+    Desmarcada, volta a seguir as regras de classificação.
+    """
+    fields = ("category", "vertical", "ufs", "potential", "demand", "prazo", "signal_type", "impacto")
+    with db.connect() as conn:
+        if on:
+            conn.execute("UPDATE news SET sem_relacao=1, potential='Baixo', demand='Não', impacto=? WHERE id=?",
+                         (SEM_RELACAO_IMPACTO, news_id))
+            return
+        r = conn.execute("SELECT url, title, summary, theme FROM news WHERE id=?", (news_id,)).fetchone()
+        c = classify.classify(r["title"], r["summary"], r["theme"], config.load_config(), url=r["url"])
+        conn.execute(f"UPDATE news SET sem_relacao=0, {', '.join(f + '=?' for f in fields)} WHERE id=?",
+                     (*(c[f] for f in fields), news_id))
 
 
 def add_from_url(url: str, theme: str | None = None) -> dict:

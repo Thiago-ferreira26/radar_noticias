@@ -93,9 +93,20 @@ CITY_UF = {
     # polos de mineração/indústria pesada
     "porto trombetas": "PA", "trombetas": "PA", "carajas": "PA", "alunorte": "PA", "albras": "PA",
     "maraba": "PA", "itaituba": "PA", "caetite": "BA", "lagoa real": "BA", "itabira": "MG", "congonhas": "MG",
+    "cariri": "CE", "crato": "CE", "barbalha": "CE",
+    # "Porto + nome" é cidade, não porto (ver PLACE_PORTO_RE)
+    "porto velho": "RO", "porto alegre": "RS", "porto seguro": "BA", "porto de galinhas": "PE",
 }
 UF_CODES = set(UF_NAMES.values())
 NORDESTE = {"MA", "PI", "CE", "RN", "PB", "PE", "AL", "SE", "BA"}
+# Cotação usada para converter valores citados em US$ (porte do investimento); aproximada de propósito.
+USD_BRL = 5.4
+# Nomes de lugar com "porto" que não são porto: tirados do texto antes de escolher a área e a demanda.
+PLACE_PORTO_RE = re.compile(r"(?<![a-z])(porto (velho|alegre|seguro|nacional|real|feliz|calvo|ferreira|das dunas"
+                            r"|de galinhas)|cais do porto|fc porto|cidade do porto|voos? para (o )?porto)(?![a-z])")
+# Palavras muito comuns em português: texto com poucas delas está em outra língua.
+PT_STOPWORDS = set("de da do das dos em no na nos nas para com que uma um por ao os as e o a se mais sobre "
+                   "entre ate apos pela pelo sao nao foi tem".split())
 
 
 def norm(text: str) -> str:
@@ -146,8 +157,12 @@ def detect_ufs(text: str, text_n: str) -> list[str]:
             if name == "mato grosso" and "mato grosso do sul" in text_n:
                 continue
             add(uf)
+    if re.search(r"\bPará\b", text or ""):  # com acento e maiúscula é o estado, não a preposição
+        add("PA")
     for city, uf in CITY_UF.items():
         if re.search(rf"\b{city}\b", text_n):
+            if city == "cariri" and "cariri paraibano" in text_n:
+                continue
             add(uf)
     if not found and re.search(r"\bnordeste\b", text_n):
         found.append("NE")
@@ -155,14 +170,16 @@ def detect_ufs(text: str, text_n: str) -> list[str]:
 
 
 def detect_value_millions(text: str) -> float | None:
+    """Maior valor citado, em milhões de R$ (valores em US$ convertidos por USD_BRL)."""
     best = None
-    for m in re.finditer(r"R\$\s?([\d.,]+)\s?(bilh|bi\b|milh|mi\b)", text or "", re.I):
-        raw = m.group(1).replace(".", "").replace(",", ".")
+    for m in re.finditer(r"(R|US)\$\s?([\d.,]+)\s?(bilh|bi\b|milh|mi\b)", text or "", re.I):
+        raw = m.group(2).replace(".", "").replace(",", ".")
         try:
             value = float(raw)
         except ValueError:
             continue
-        value *= 1000 if m.group(2).lower().startswith("bi") else 1
+        value *= 1000 if m.group(3).lower().startswith("bi") else 1
+        value *= USD_BRL if m.group(1).upper() == "US" else 1
         best = max(best or 0, value)
     return best
 
@@ -200,7 +217,15 @@ def out_of_scope(title: str, summary: str, url: str | None, ufs: list[str], cfg:
     title_n, text_n = norm(title), norm(f"{title} {summary}")
     if ufs == ["BR"] and _has(title_n, FOREIGN_KW) and not _has(text_n, BRAZIL_KW):
         return "Notícia sobre outro país, sem obra no Brasil"
+    if ufs == ["BR"] and foreign_language(text_n) and not _has(text_n, BRAZIL_KW):
+        return "Notícia em outra língua, sem relação com o Brasil"
     return None
+
+
+def foreign_language(text_n: str) -> bool:
+    """True se o texto (normalizado) quase não tem palavras comuns do português."""
+    words = re.findall(r"[a-z]+", text_n)
+    return len(words) >= 8 and sum(w in PT_STOPWORDS for w in words) / len(words) < 0.08
 
 
 def classify(title: str, summary: str, theme: str | None = None, cfg: dict | None = None,
@@ -213,9 +238,10 @@ def classify(title: str, summary: str, theme: str | None = None, cfg: dict | Non
 
     text = f"{title or ''}. {summary or ''}"
     text_n = norm(text)
+    ufs = detect_ufs(text, text_n)
+    text_n = PLACE_PORTO_RE.sub(" ", text_n)  # "Porto Velho", "Cais do Porto"... não contam como porto
     category = detect_category(text_n, fallback=theme)
     vertical = VERTICAL_BY_CATEGORY.get(category, "Infraestrutura")
-    ufs = detect_ufs(text, text_n)
     value = detect_value_millions(text)
     pending = _has(text_n, PENDING_KW)
     ongoing = _has(text_n, ONGOING_KW)

@@ -115,10 +115,17 @@ Ficam fora da Visão do dia, do Modo TV, dos indicadores e das exportações, ma
 
 - **Sem relação com a Cordeiro:** demanda de guindaste/área = "Não". A classificação automática não
   achou relação com içamento ou carga pesada, ou o analista marcou "Não".
+  - **Botão "Sem relação com a Cordeiro"** (só administrador, embaixo de cada card): tira a notícia
+    do painel de vez, e a reclassificação não a traz de volta. No Histórico, com as notícias sem
+    relação ligadas, o mesmo botão vira **"Devolver ao painel"**.
 - **Fora do escopo:** viram demanda "Não", com o motivo escrito no quadro de impacto.
   - **Sites de Portugal** (`.pt`). O termo "Porto de Vila do Conde" traz muitas notícias da cidade
     portuguesa.
   - **Notícias sobre outro país** sem estado brasileiro nem menção ao Brasil.
+  - **Notícias em outra língua** (quase sem palavras comuns do português) que não citam estado,
+    polo da região nem o Brasil. Em inglês sobre o Pecém, por exemplo, continuam.
+  - "Porto Velho", "Porto Alegre", "Porto de Galinhas", "Cais do Porto", "FC Porto"… são nomes de
+    lugar e não contam como porto.
   - Notícias com as palavras de `excluir_se_contiver` no `config/termos.yaml`: futebol, eleições,
     crimes e acidentes, listas genéricas de licitação, "valor de mercado"… A comparação é por
     palavra inteira. Na coleta, essas notícias nem entram.

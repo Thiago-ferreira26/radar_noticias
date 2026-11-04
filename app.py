@@ -11,7 +11,7 @@ import pandas as pd
 import streamlit as st
 
 from radar import auth, cnpj, config, crm, db, dossier, export, images, score, ui
-from radar.collector import add_from_url, run_collection
+from radar.collector import add_from_url, run_collection, set_sem_relacao
 from radar.classify import CATEGORIES, has_relation
 
 st.set_page_config(page_title="Radar Cordeiro", page_icon="📡", layout="wide")
@@ -166,6 +166,21 @@ def render_cards(df: pd.DataFrame, new_day: str | None = None, limit: int | None
                              ficha_html=ui.ficha(r, r["ficha"], accounts, r["ficha_texto"]), images=r["images"],
                              crm_html=ui.crm_block(s, crm.lead_url(s["lead_id"]) if s else None)))
                 crm_button(r, f"{key}_crm_{r['id']}", s)
+                if auth.is_admin():
+                    relation_button(r, f"{key}_rel_{r['id']}")
+
+
+def relation_button(r: dict, key: str) -> None:
+    """Administrador: tira do painel a notícia sem relação com a Cordeiro (ou devolve, no Histórico)."""
+    marked = bool(r.get("sem_relacao"))
+    label = "Devolver ao painel" if marked else "Sem relação com a Cordeiro"
+    if st.button(label, key=key, width="stretch", type="tertiary",
+                 help=None if marked else "Oculta a notícia de vez (a reclassificação não a traz de volta)."):
+        set_sem_relacao(int(r["id"]), on=not marked)
+        refresh()
+        st.session_state["crm_flash"] = ("↩️ Notícia devolvida ao painel." if marked
+                                         else "🚫 Notícia marcada como sem relação e retirada do painel.")
+        st.rerun()
 
 
 VERTICALS = ["Energia", "Minerais", "Infraestrutura"]
