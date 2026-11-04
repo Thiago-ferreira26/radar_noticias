@@ -200,7 +200,7 @@ footer{font-size:12px;color:var(--text-mut);border-top:1px solid var(--border);p
     <div style="min-width:0;flex:1 1 520px">
       <div class="kicker">Grupo Cordeiro · Pipeline de obras</div>
       <h1>Mapa de Obras · Eólico, Mineração, Infraestrutura e Top 30</h1>
-      <p class="sub">Obras cadastradas no Obras Online e reunidas nas apresentações de eólico, mineração, infraestrutura (data centers e obras de infraestrutura) e Projetos Top 30 (Vale, Eneva e Omnia DC). Filtre pela previsão de término da fase atual e pela previsão de entrega para priorizar abordagens comerciais de locação de guindastes e área.</p>
+      <p class="sub">Obras reunidas nas apresentações de eólico, mineração, infraestrutura (data centers e obras de infraestrutura) e Projetos Top 30 (Vale, Eneva e Omnia DC). Filtre pela previsão de término da fase atual e pela previsão de entrega para priorizar abordagens comerciais de locação de guindastes e área.</p>
     </div>
     <button class="themebtn" id="themeBtn" type="button">Alternar tema</button>
   </header>
@@ -601,7 +601,7 @@ document.getElementById('themeBtn').addEventListener('click',()=>{
   r.dataset.theme=cur==='dark'?'light':'dark';
 });
 const lastAtu=DB.obras.map(o=>o.dAtu).filter(Boolean).sort((a,b)=>b-a)[0];
-document.getElementById('foot').innerHTML=`Fonte: Obras Online, fichas compiladas nas apresentações “Eólico”, “Mineração”, “Infraestrutura” (data centers e infraestrutura) e “Projetos Top 30 Vale” (Vale, Eneva e Omnia DC). Atualização mais recente nas fichas: ${lastAtu.toLocaleDateString('pt-BR')}. Nomes de obras e contatos aparecem mascarados como na fonte. Valores são os informados no cadastro e representam escopos distintos; a soma serve só como ordem de grandeza. Prazos “em X dias” contados a partir de ${TODAY.toLocaleDateString('pt-BR')}.`;
+document.getElementById('foot').innerHTML=`Fichas compiladas nas apresentações “Eólico”, “Mineração”, “Infraestrutura” (data centers e infraestrutura) e “Projetos Top 30 Vale” (Vale, Eneva e Omnia DC). Atualização mais recente nas fichas: ${lastAtu.toLocaleDateString('pt-BR')}. Nomes de obras e contatos aparecem mascarados como na fonte. Valores são os informados no cadastro e representam escopos distintos; a soma serve só como ordem de grandeza. Prazos “em X dias” contados a partir de ${TODAY.toLocaleDateString('pt-BR')}.`;
 update();
 </script>
 

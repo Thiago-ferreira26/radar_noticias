@@ -1,4 +1,4 @@
-"""Mapa de Obras Cordeiro (página inicial do app mapa_obras.py): obras do Obras Online no mapa, com envio ao
+"""Mapa de Obras Cordeiro (página inicial do app mapa_obras.py): obras no mapa, com envio ao
 Bitrix, Excel e Modo TV.
 
 O mapa e as fichas são o painel "mapa_obras_cordeiro-PAINEL.html" (radar/obras.html), alimentado pelo banco.
@@ -50,7 +50,7 @@ html(ui.header([
     (f"{sum(o['daysTerm'] is not None and 0 <= o['daysTerm'] <= 60 for o in lista)}", "Fase termina em até 60 dias", True),
     (ui.fmt_date(last["imported_at"], True) if last else "—", "Última importação", False),
 ], title="Mapa de Obras Cordeiro",
-   subtitle="Inteligência de Mercado — obras de eólico, mineração, data center e infraestrutura (Obras Online)"))
+   subtitle="Inteligência de Mercado — obras de eólico, mineração, data center, infraestrutura e Top 30"))
 c_tv, _, c_admin = st.columns([3, 5, 2], vertical_alignment="center")
 c_tv.page_link("obras_app/tv.py", label="Abrir Modo TV (carrossel para a TV)", icon="📺")
 with c_admin:
@@ -151,4 +151,4 @@ if is_admin:
                                     "n_total": "Obras", "n_new": "Novas", "n_updated": "Atualizadas",
                                     "n_removed": "Removidas"})
 
-html(ui.footer(f"Fonte: Obras Online · Última importação: {ui.fmt_date(last['imported_at'], True) if last else '—'}"))
+html(ui.footer(f"Última importação: {ui.fmt_date(last['imported_at'], True) if last else '—'}"))

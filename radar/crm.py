@@ -114,14 +114,14 @@ def send_lead(row: dict, ficha: dict, user: dict, empresa: dict | None = None) -
 
 
 def build_obra_body(o: dict) -> str:
-    """Corpo do lead de uma obra do Mapa de Obras (Obras Online)."""
+    """Corpo do lead de uma obra do Mapa de Obras."""
     def line(label, value):
         return f"<b>{escape(label)}:</b> {escape(str(value))}<br>" if value and value != "-" else ""
 
     empresas = "".join(f"• {escape(e.get('nome') or '')} — {escape(e.get('papel') or '')}<br>"
                        for e in o.get("empresas") or [])
     return (
-        f"<b>Mapa de Obras Cordeiro (Obras Online)</b><br>"
+        f"<b>Mapa de Obras Cordeiro</b><br>"
         f"<b>Lead IM:</b> {escape(o['im'])}<br><br>"
         + line("Segmento", o.get("setor"))
         + line("Tipo de obra", o.get("tipo"))
@@ -138,7 +138,7 @@ def build_obra_body(o: dict) -> str:
         + line("Histórico", o.get("obs"))
         + (f"<br><b>Empresas:</b><br>{empresas}" if empresas else "")
         + "<br>"
-        + line("Código Obras Online", o.get("cod"))
+        + line("Código da obra", o.get("cod"))
         + line("Última atualização na fonte", o.get("atu"))
     )
 
@@ -150,7 +150,7 @@ def send_obra_lead(o: dict, user: dict) -> dict:
         "TITLE": f"[{o['im']}] {title}"[:255],
         "COMMENTS": build_obra_body(o),
         "ASSIGNED_BY_ID": int(user["id"]),
-        "SOURCE_DESCRIPTION": f"Mapa de Obras Cordeiro {o['im']} — Obras Online"[:255],
+        "SOURCE_DESCRIPTION": f"Mapa de Obras Cordeiro {o['im']}"[:255],
     }
     return _create_lead(fields, user, {"obra_cod": o.get("cod")}, title)
 
