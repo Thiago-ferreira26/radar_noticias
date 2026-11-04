@@ -82,6 +82,18 @@ excluir_se_contiver:
   - licitações de alimentação
   - limpeza & conservação
   - valor de mercado
+  # tarifa de energia ao consumidor, sem obra ("conta de luz" fica de fora: aparece em notícias de usinas)
+  - bandeira tarifária
+  - bandeira verde
+  - bandeira amarela
+  - bandeira vermelha
+  - tarifa de energia
+  - reajuste tarifário
+  # posse em cargo de entidade, sem obra ("novo CEO" fica de fora: troca em construtora vale como contato)
+  - assume presidência
+  - assume a presidência
+  - toma posse
+  - tomou posse
 temas:
   - nome: Energia
     termos:
