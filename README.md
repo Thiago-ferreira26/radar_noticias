@@ -406,7 +406,10 @@ Coleta avulsa pela linha de comando:
 6. **Classificação automática** (`radar/classify.py`): regras que seguem os critérios de potencial
    da newsletter (relação com içamento, UF dentro da área de atuação, decisão pendente ou obra em
    andamento, porte financeiro). Elas atribuem vertical, categoria, UF, prazo, potencial, demanda e
-   o texto "Impacto para a Cordeiro". **É uma triagem por palavras-chave, não uma análise.** Nas 52
+   o texto "Impacto para a Cordeiro". O impacto depende do **tipo de projeto** dentro da área
+   (`NEED_BY_TYPE`): eólica, solar, transmissão, data center, terminal de contêineres, pesquisa
+   mineral etc. Sem tipo identificado, vale o texto genérico da área. **É uma triagem por
+   palavras-chave, não uma análise.** Nas 52
    notícias da newsletter de referência, as regras acertaram o potencial exato em 36 e a UF em 49.
    Valide antes de prospectar. Depois de ajustar as regras ou as UFs, reclassifique a base:
 

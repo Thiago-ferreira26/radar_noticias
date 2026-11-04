@@ -47,6 +47,132 @@ NEED_BY_CATEGORY = {
     "Infraestrutura": "Içamento de vigas, pré-moldados e estruturas em obras civis.",
 }
 
+# Necessidade por tipo de projeto dentro de cada área: a primeira linha cujas palavras aparecem no texto vale;
+# se nenhuma casar, fica o texto genérico de NEED_BY_CATEGORY.
+NEED_BY_TYPE = {
+    "Energia": [
+        (["eolica offshore", "eolicas offshore", "eolico offshore"],
+         "Eólica no mar: guindastes no porto de apoio para pré-montagem e embarque de torres, naceles e pás; área retroportuária para estoque de componentes."),
+        (["eolic", "aerogerador", "parque eolico", "complexo eolico"],
+         "Içamento de torres, naceles e pás dos aerogeradores (guindastes de grande porte); área para pré-montagem e estoque de componentes."),
+        (["solar", "fotovolta"],
+         "Descarga e distribuição de módulos, estruturas (trackers) e inversores; içamento de transformadores da subestação; área para estoque de material."),
+        (["linha de transmissao", "linhas de transmissao", "subestac", "transmissao"],
+         "Montagem de torres treliçadas e lançamento de cabos; içamento de transformadores e reatores nas subestações."),
+        (["hidrogenio", "h2v", "eletroliz", "amonia verde"],
+         "Montagem de eletrolisadores, tanques e módulos de processo; cargas de projeto recebidas pelo porto."),
+        (["bateria", "armazenamento de energia", "bess"],
+         "Içamento de contêineres de baterias (BESS), transformadores e inversores; área para estoque dos módulos."),
+        (["nuclear", "reator", "angra 3"],
+         "Cargas superpesadas (vaso do reator, geradores de vapor) e montagem de estruturas de grande porte."),
+        (["termeletric", "termica", "usina a gas", "ciclo combinado", "biomassa"],
+         "Içamento de turbinas, geradores, caldeiras e transformadores; montagem da estrutura da casa de força."),
+        (["hidreletric", "pch "],
+         "Içamento de turbinas, geradores e comportas; montagem de pontes rolantes da casa de força."),
+    ],
+    "Portos": [
+        (["terminal de conteineres", "conteiner", "porteiner", "tecon"],
+         "Montagem de portêineres e transtêineres (STS/RTG); movimentação de equipamentos e estruturas do pátio."),
+        (["glp", "gnl", "combustiveis", "granel liquido", "graneis liquidos", "tancagem"],
+         "Montagem de tanques, esferas e tubovias do terminal; içamento de braços de carregamento; cargas de projeto pelo cais."),
+        (["granel", "graneis", "minerio", "graos", "fertilizante"],
+         "Montagem de carregadores de navio, correias transportadoras e silos; área retroportuária para estoque."),
+        (["dragagem"],
+         "A dragagem em si usa dragas; a demanda de guindaste vem das obras ligadas a ela (cais, berços, defensas) e do apoio no canteiro."),
+        (["cais", "berco", "pier", "atracac"],
+         "Cravação de estacas e içamento de vigas e pré-moldados do cais; montagem de defensas e equipamentos portuários."),
+    ],
+    "Mineração": [
+        (["siderurg", "aco ", "laminadora", "laminacao", "alto-forno", "alto forno"],
+         "Montagem de altos-fornos, laminadores e pontes rolantes; cargas pesadas de equipamentos industriais."),
+        (["pelotiz"],
+         "Montagem de fornos, discos de pelotamento e correias; estruturas metálicas da usina de pelotização."),
+        (["fertilizante", "fosfato", "potassio"],
+         "Montagem da planta química: reatores, tanques, silos e estruturas metálicas."),
+        (["pesquisa mineral", "sondagem", "novos alvos", "alvos de", "descoberta", "reservas", "estimativa de recursos"],
+         "Fase de pesquisa mineral: pouca demanda agora (sondagem). A demanda vem quando a mina e a planta forem implantadas."),
+        (["refinaria de alumina", "alumina", "aluminio"],
+         "Montagem de digestores, calcinadores e tanques; cargas pesadas de equipamentos da refinaria."),
+    ],
+    "Óleo & Gás": [
+        (["refinaria", "refino"],
+         "Montagem de torres de destilação, reatores, vasos e tubovias; cargas superpesadas de projeto."),
+        (["gasoduto", "oleoduto"],
+         "Lançamento de tubos (sidebooms e guindastes), travessias e montagem de estações de compressão e entrega."),
+        (["gnl", "regaseific"],
+         "Montagem de tanques criogênicos, braços de carregamento e tubovias; cargas de projeto pelo porto."),
+        (["glp", "terminal de combustiveis", "tancagem", "base de distribuicao"],
+         "Montagem de tanques, esferas e tubovias; içamento de bombas e equipamentos do terminal."),
+        (["fpso", "plataforma", "sonda", "offshore", "margem equatorial", "bloco ", "blocos", "pre-sal", "poco "],
+         "Atividade no mar: a demanda em terra fica nas bases de apoio portuário (movimentação de cargas, módulos e equipamentos)."),
+    ],
+    "Industrial": [
+        (["data center", "datacenter"],
+         "Içamento de geradores, chillers, transformadores e módulos de energia; montagem da estrutura metálica do prédio."),
+        (["celulose", "papel e celulose", "fabrica de papel"],
+         "Montagem de caldeira de recuperação, digestor e máquinas de papel; cargas superpesadas."),
+        (["cimento", "cimenteira", "clinquer"],
+         "Montagem de forno rotativo, moinhos e silos; estruturas metálicas da fábrica."),
+        (["montadora", "automotiv", "veiculos"],
+         "Instalação de linhas de produção, prensas e robôs; montagem de estrutura metálica e pontes rolantes."),
+        (["galvaniz", "metalurg", "fundicao"],
+         "Instalação de fornos, tanques e pontes rolantes; montagem de estruturas metálicas."),
+        (["galpao", "galpoes", "centro de distribuicao", "condominio logistico"],
+         "Montagem de estruturas metálicas e pré-moldados do galpão; descarga de equipamentos."),
+    ],
+    "Logística/Hidrovias": [
+        (["ferrovia", "ferroviari", "transnordestina", "ferrograo", "fiol", "fico "],
+         "Lançamento de vigas de pontes e viadutos ferroviários; descarga de trilhos e dormentes; montagem de pátios e terminais."),
+        (["ponte", "viaduto"],
+         "Içamento de vigas longarinas e aduelas pré-moldadas; montagem de aparelhos de apoio."),
+        (["aeroporto"],
+         "Montagem de estruturas metálicas do terminal, pontes de embarque e equipamentos de pátio."),
+        (["hidrovia", "fluvial", "balsa"],
+         "Montagem de terminais fluviais e estruturas de atracação; movimentação de cargas em balsas."),
+        (["porto seco", "terminal multimodal", "terminal intermodal"],
+         "Movimentação de contêineres e montagem de silos, estruturas e equipamentos do terminal."),
+        (["rodovia", "duplicac", "br-"],
+         "Içamento de vigas de pontes e viadutos; pré-moldados (galerias, defensas) ao longo do trecho."),
+    ],
+    "Saneamento": [
+        (["dessaliniz"],
+         "Montagem de módulos de osmose reversa, tanques e captação no mar; assentamento de tubos de grande diâmetro."),
+        (["adutora", "tubulac", "ramal"],
+         "Assentamento de tubos de grande diâmetro e montagem de estações elevatórias."),
+        (["esgot", "ete "],
+         "Montagem de estações de tratamento de esgoto (ETE) e elevatórias; assentamento de interceptores e emissários."),
+        (["abastecimento de agua", "eta ", "reservatorio"],
+         "Montagem de estações de tratamento de água (ETA), reservatórios e elevatórias."),
+        (["barragem", "acude"],
+         "Montagem de comportas, tomadas d'água e estruturas de concreto; movimentação de equipamentos pesados."),
+    ],
+    "Infraestrutura": [
+        (["iluminacao publica", "luminaria", "led "],
+         "Troca de postes e luminárias: serviço de caminhão munck, pouca demanda de guindaste."),
+        (["hospital", "escola", "edificio", "predio", "arena", "estadio", "centro de eventos"],
+         "Içamento de estruturas metálicas e pré-moldados da edificação; guindaste para cobertura e equipamentos."),
+        (["viaduto", "ponte", "pre-moldad", "passarela"],
+         "Içamento de vigas e pré-moldados; montagem de aparelhos de apoio."),
+        (["drenagem", "pavimentac", "contencao de encostas", "encosta"],
+         "Obras urbanas de drenagem e pavimentação: pouca demanda de guindaste (no máximo galerias pré-moldadas)."),
+    ],
+}
+
+
+# Valem em qualquer área (a categoria às vezes vem do termo de busca, ex.: iluminação no acesso a um porto).
+ANY_CATEGORY_NEEDS = [
+    (["iluminacao publica", "iluminacao led", "luminaria"],
+     "Troca de postes e luminárias: serviço de caminhão munck, pouca demanda de guindaste."),
+]
+
+
+def need_for(category: str, text_n: str) -> str:
+    """Necessidade provável de guindaste/área para o tipo de projeto da notícia."""
+    for kws, need in ANY_CATEGORY_NEEDS + NEED_BY_TYPE.get(category, []):
+        if _has(text_n, kws):
+            return need
+    return NEED_BY_CATEGORY[category]
+
 # Indica relação prática com içamento / carga pesada.
 CRANE_KW = ["obra", "constru", "implant", "instala", "fabrica", "usina", "parque", "porto", "terminal", "mina",
             "montagem", "expans", "ampliac", "planta", "linha de transmissao", "subestac", "ferrovia", "ponte",
@@ -66,10 +192,13 @@ PENDING_KW = ["estudo", "estuda", "avalia", "planeja", "pretende", "preve", "pre
               "edital", "leilao", "licitac", "memorando", "protocolo de intencoes", "intencao", "proposta",
               "viabilidade", "licenca previa", "pode receber", "negocia", "em analise"]
 ONGOING_KW = ["obras em andamento", "em andamento", "rapido andamento", "inicio das obras", "inicia obras", "iniciou as obras", "comecam as obras",
-              "em construcao", "canteiro", "contrato assinado", "assina contrato", "ordem de servico",
+              "em construcao", "contrato assinado", "assina contrato", "ordem de servico",
               "investimento aprovado", "aprova investimento", "decisao final de investimento", "licenca de instalacao",
               "pedra fundamental", "em implantacao", "inaugura", "contratad", "vence leilao", "arremat",
               "obras comecam", "obras da", "obras do"]
+CANTEIRO_WORK_KW = ["constru", "implant", "usina", "fabrica", "montagem", "terraplen", "fundac", "ampliac", "duplicac",
+                    "parque", "porto", "terminal", "ferrovia", "rodovia", "ponte", "viaduto", "mina ", "planta",
+                    "subestac", "linha de transmissao", "adutora", "refinaria", "galpao", "data center"]
 AUCTION_KW = ["leilao", "edital", "licitac", "consulta publica"]
 
 UF_NAMES = {
@@ -244,7 +373,9 @@ def classify(title: str, summary: str, theme: str | None = None, cfg: dict | Non
     vertical = VERTICAL_BY_CATEGORY.get(category, "Infraestrutura")
     value = detect_value_millions(text)
     pending = _has(text_n, PENDING_KW)
-    ongoing = _has(text_n, ONGOING_KW)
+    # "canteiro" só indica obra em andamento junto de uma palavra de obra ("canteiros de obras" numa
+    # campanha social não é obra)
+    ongoing = _has(text_n, ONGOING_KW) or (_has(text_n, ["canteiro"]) and _has(text_n, CANTEIRO_WORK_KW))
     # Setores pesados já indicam içamento por si; Industrial/Infra precisam de uma palavra de obra.
     heavy = category in STRONG_CATEGORIES and _has(text_n, CATEGORY_KW[category])
     crane = (heavy or _has(text_n, CRANE_KW)) and not (_has(text_n, LOW_KW) and not ongoing)
@@ -286,7 +417,7 @@ def classify(title: str, summary: str, theme: str | None = None, cfg: dict | Non
     if scope:
         impacto = f"{scope}: sem relação com a Cordeiro."
     elif potential != "Baixo":
-        impacto = NEED_BY_CATEGORY[category]
+        impacto = need_for(category, text_n)
     else:
         impacto = "Sem relação prática identificada com içamento ou movimentação de carga pesada."
     extras = []
