@@ -48,6 +48,7 @@ def select_exa_terms(terms: list[dict], remaining: int, day_ordinal: int, flag: 
 def _store_results(results, term, engine, run_id, cfg, image_jobs: list) -> int:
     new = 0
     for r in results:
+        r = {**r, "title": classify.fix_title(r["title"], r["summary"])}
         if classify.is_excluded(r["title"], r["summary"], cfg):
             continue
         ts = config.now()

@@ -25,7 +25,8 @@ CATEGORY_KW = {
     "Óleo & Gás": ["petroleo", "gas natural", "refinaria", "fpso", "petrobras", "gasoduto", "margem equatorial",
                    "gnl", "oleo e gas"],
     "Industrial": ["fabrica", "industria", "planta industrial", "unidade fabril", "galpao", "data center",
-                   "datacenter", "laminadora", "galvaniz", "projetos industriais", "montadora", "cimenteira", "celulose", "polo industrial", "zpe"],
+                   "datacenter", "laminadora", "galvaniz", "projetos industriais", "montadora", "cimenteira", "celulose", "polo industrial", "zpe",
+                   "frigorific", "abatedouro"],
     "Logística/Hidrovias": ["hidrovia", "ferrovia", "transnordestina", "ferrograo", "fiol", "logistic",
                             "porto seco", "rodovia", "duplicacao", "ponte", "aeroporto"],
     "Saneamento": ["saneamento", "adutora", "dessaliniz", "esgoto", "estacao de tratamento", "abastecimento de agua"],
@@ -117,6 +118,8 @@ NEED_BY_TYPE = {
          "Instalação de linhas de produção, prensas e robôs; montagem de estrutura metálica e pontes rolantes."),
         (["galvaniz", "metalurg", "fundicao"],
          "Instalação de fornos, tanques e pontes rolantes; montagem de estruturas metálicas."),
+        (["frigorific", "abatedouro"],
+         "Galpões e câmaras frias da planta frigorífica; içamento de equipamentos de refrigeração e estruturas metálicas."),
         (["galpao", "galpoes", "centro de distribuicao", "condominio logistico"],
          "Montagem de estruturas metálicas e pré-moldados do galpão; descarga de equipamentos."),
     ],
@@ -260,6 +263,19 @@ def _kw(k: str) -> re.Pattern:
 
 def _has(text_n: str, kws) -> bool:
     return any(_kw(k).search(text_n) for k in kws)
+
+
+def fix_title(title: str, summary: str) -> str:
+    """Título que é só o nome do site ("Web Rádio Ceara Rural"): usa a manchete que vem no resumo após "# "."""
+    t = (title or "").strip()
+    s = re.sub("[\u200b\ufeff]", "", summary or "")
+    if not t or len(t.split()) > 6 or not s.startswith(t + " # "):
+        return title
+    head = s[len(t) + 3:].strip()
+    if norm(head).startswith(norm(t)):  # a manchete repete o título: o título já é a manchete
+        return title
+    head = re.split(r"\s+[-|–]\s+", head, maxsplit=1)[0].strip()
+    return head[:300] if len(head) >= 20 else title
 
 
 def detect_category(text_n: str, fallback: str | None = None) -> str:
