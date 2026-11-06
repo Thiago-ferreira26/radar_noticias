@@ -107,6 +107,10 @@ excluir_se_contiver:
   - oportunidades de emprego
   - estágios
   - cursos gratuitos
+  # discurso de vereador, sem projeto ("deputado" fica de fora: cobranças a Petrobras/governo trazem pistas)
+  - vereador
+  - vereadora
+  - vereadores
 temas:
   - nome: Energia
     termos:
