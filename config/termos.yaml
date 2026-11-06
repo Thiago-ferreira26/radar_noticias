@@ -111,6 +111,9 @@ excluir_se_contiver:
   - vereador
   - vereadora
   - vereadores
+  # turismo/história sem obra ("turistas" fica de fora: empreendimentos turísticos e cruzeiros têm obra)
+  - patrimônio mundial
+  - cidade colonial
 temas:
   - nome: Energia
     termos:
