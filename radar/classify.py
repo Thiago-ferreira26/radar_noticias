@@ -20,7 +20,7 @@ CATEGORY_KW = {
                 "complexo eolico", "parque eolico", "offshore", "bateria", "armazenamento de energia"],
     "Portos": ["porto", "portuari", "terminal portuario", "terminal de conteineres", "mucuripe", "cais", "berco", "dragagem",
                "retroportuari", "vila do conde", "itaqui", "suape"],
-    "Mineração": ["minera", "minerio", "mina ", "lavra", "litio", "cobre", "niquel", "ouro", "bauxita",
+    "Mineração": ["minera", "minerio", "mina ", "lavra ", "litio", "cobre", "niquel", "ouro", "bauxita",
                   "carajas", "siderurg", "aco ", "pelotiz", "fertilizante", "fosfato", "potassio"],
     "Óleo & Gás": ["petroleo", "gas natural", "refinaria", "fpso", "petrobras", "gasoduto", "margem equatorial",
                    "gnl", "oleo e gas"],
@@ -298,6 +298,9 @@ def detect_ufs(text: str, text_n: str) -> list[str]:
         uf = next(g for g in m.groups() if g)
         if uf in UF_CODES:
             add(uf)
+    for m in re.finditer(r"\b(?:no|do|ao|em|pelo|para o) ([A-Z]{2})\b", text or ""):  # "no CE", "do PA"
+        if m.group(1) in UF_CODES:
+            add(m.group(1))
     for name, uf in UF_NAMES.items():
         if name in AMBIGUOUS_NAMES:
             if re.search(rf"\b(no|do|ao|pelo|estado do|sul do|sudeste do|oeste do|norte do) {name}\b", text_n):
