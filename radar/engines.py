@@ -245,6 +245,82 @@ def search_rss(url: str, cfg: dict, name: str | None = None) -> list[dict]:
     return results
 
 
+# ------------------------------------------------------------ Sitemap (sites sem feed RSS)
+def _page_meta(url: str) -> dict | None:
+    """Título, resumo, data e imagem lidos das metatags da página (og:title, og:description…)."""
+    from html import unescape
+
+    from .images import HEADERS
+
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=25)
+        resp.raise_for_status()
+    except requests.RequestException:
+        return None
+    page = resp.text
+
+    def meta(*names):
+        for n in names:
+            pat = re.escape(n)
+            m = (re.search(rf'<meta[^>]+(?:property|name)=["\']{pat}["\'][^>]*content=["\']([^"\']+)', page, re.I)
+                 or re.search(rf'<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:property|name)=["\']{pat}["\']', page, re.I))
+            if m:
+                return unescape(m.group(1)).strip()
+        return None
+
+    title = meta("og:title", "twitter:title") or (re.search(r"<title>(.*?)</title>", page, re.S | re.I) or [None, ""])[1]
+    title = re.sub(r"\s+", " ", unescape(title or "")).strip()
+    site = meta("og:site_name")
+    parts = [p.strip() for p in re.split(r"\s+[-|–]\s+", title)]
+    if len(parts) > 1 and site and parts[-1].lower() == site.lower():  # "Manchete - O Otimista"
+        title = " - ".join(parts[:-1])
+    elif len(parts) > 1 and site and parts[0].lower() == site.lower():  # "O Otimista - Manchete"
+        title = " - ".join(parts[1:])
+    if not title:
+        return None
+    published = meta("article:published_time", "og:published_time", "datePublished") or (
+        re.search(r'"datePublished"\s*:\s*"([^"]+)"', page) or [None, None])[1]
+    return {"title": _clean(title, 300), "summary": _clean(meta("og:description", "description",
+                                                               "twitter:description") or ""),
+            "published_at": to_local_iso(published) if published else None, "image": meta("og:image"), "site": site}
+
+
+def search_sitemap(url: str, cfg: dict, name: str | None = None, days: int = 3, max_pages: int = 80) -> list[dict]:
+    """Notícias de um mapa do site (sitemap.xml) para portais sem feed RSS (ex.: O Otimista).
+    O sitemap só traz endereço e data: as matérias dos últimos `days` dias que ainda não estão no banco
+    são abertas (em paralelo) para ler título, resumo e imagem. Sem custo de API."""
+    from concurrent.futures import ThreadPoolExecutor
+    from xml.etree import ElementTree as ET
+
+    from . import db
+    from .images import HEADERS
+
+    resp = requests.get(url, headers=HEADERS, timeout=40)
+    if resp.status_code >= 400:
+        raise RuntimeError(f"Sitemap HTTP {resp.status_code}: {url}")
+    root = ET.fromstring(resp.content)
+    ns = "{http://www.sitemaps.org/schemas/sitemap/0.9}"
+    since = (datetime.now(config.TZ) - timedelta(days=days)).date().isoformat()
+    entries = []
+    for el in root.iter(f"{ns}url"):
+        loc = (el.findtext(f"{ns}loc") or "").strip()
+        lastmod = (el.findtext(f"{ns}lastmod") or "").strip()
+        if loc and lastmod[:10] >= since and not db.news_id(normalize_url(loc)):
+            entries.append((loc, lastmod))
+    entries = sorted(entries, key=lambda e: e[1], reverse=True)[:max_pages]
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        metas = list(pool.map(lambda e: _page_meta(e[0]), entries))
+    results = []
+    for (loc, lastmod), m in zip(entries, metas):
+        if not m:
+            continue
+        results.append({
+            "title": m["title"], "url": loc, "source": name or m["site"] or source_from_url(loc),
+            "published_at": m["published_at"] or to_local_iso(lastmod), "summary": m["summary"], "image": m["image"],
+        })
+    return results
+
+
 # ------------------------------------------------------------ DuckDuckGo
 def _ddgs_class():
     try:

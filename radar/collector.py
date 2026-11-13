@@ -176,7 +176,10 @@ def run_collection(trigger: str = "manual", progress=None, only_feeds: bool = Fa
             term = {"texto": f"RSS: {name}", "tema": feed.get("tema")}
             stats["n_searches"] += 1
             try:
-                results = engines.search_rss(feed["url"], cfg, name)
+                if feed.get("tipo") == "sitemap":  # site sem feed RSS: lê o mapa do site
+                    results = engines.search_sitemap(feed["url"], cfg, name, days=int(feed.get("dias_retroativos", 3)))
+                else:
+                    results = engines.search_rss(feed["url"], cfg, name)
                 new = _store_results(results, term, "rss", run_id, cfg, image_jobs)
                 stats["n_results"] += len(results)
                 stats["n_new"] += new
@@ -308,6 +311,8 @@ def add_from_url(url: str, theme: str | None = None) -> dict:
     parts = [p.strip() for p in re.split(r"\s+[-|–]\s+", title)]
     if len(parts) > 1 and site and parts[-1].lower() == site.lower():
         title = parts[0]
+    elif len(parts) > 1 and site and parts[0].lower() == site.lower():  # "O Otimista - Manchete"
+        title = " - ".join(parts[1:])
     description = meta("og:description", "description", "twitter:description") or ""
     # texto da matéria a partir do resumo, para um resumo mais completo e uma classificação melhor
     text = re.sub(r"\s+", " ", unescape(re.sub(r"<[^>]+>", " ", re.sub(r"<script[\s\S]*?</script>|<style[\s\S]*?</style>", " ", html))))

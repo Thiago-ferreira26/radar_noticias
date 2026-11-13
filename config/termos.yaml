@@ -30,6 +30,8 @@ fontes_rss:
   - {nome: Movimento Econômico, url: "https://movimentoeconomico.com.br/economia/energia/feed/", tema: Energia, ativo: true}
   - {nome: Movimento Econômico, url: "https://movimentoeconomico.com.br/economia/infraestrutura/feed/", tema: Infraestrutura, ativo: true}
   - {nome: Movimento Econômico, url: "https://movimentoeconomico.com.br/economia/industria-empresas/feed/", tema: Industrial, ativo: true}
+  # Sites sem feed RSS: tipo sitemap lê o mapa do site (matérias dos últimos N dias que ainda não estão no banco)
+  - {nome: O Otimista, url: "https://ootimista.com.br/sitemaps/noticias/1", tipo: sitemap, dias_retroativos: 3, ativo: true}
 # Fontes avaliadas e não incluídas como feed (aparecem na janela "Fontes de dados" do painel).
 fontes_nao_incluidas:
   - {nome: Valor Econômico, url: "https://valor.globo.com", motivo: "Feed geral (política, varejo…), quase só ruído; notícias chegam pelas buscas"}
@@ -82,6 +84,10 @@ excluir_se_contiver:
   - despiste
   - morre em
   - morre após
+  - tiros
+  - tiroteio
+  - tráfico de drogas
+  - cocaína
   # listas e mercado financeiro sem obra
   - licitações de saúde
   - licitações de alimentação

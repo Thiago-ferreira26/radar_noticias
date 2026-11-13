@@ -229,7 +229,7 @@ CITY_UF = {
     # polos de mineração/indústria pesada
     "porto trombetas": "PA", "trombetas": "PA", "carajas": "PA", "alunorte": "PA", "albras": "PA",
     "maraba": "PA", "itaituba": "PA", "caetite": "BA", "lagoa real": "BA", "itabira": "MG", "congonhas": "MG",
-    "cariri": "CE", "crato": "CE", "barbalha": "CE",
+    "cariri": "CE", "metrofor": "CE", "crato": "CE", "barbalha": "CE",
     # "Porto + nome" é cidade, não porto (ver PLACE_PORTO_RE)
     "porto velho": "RO", "porto alegre": "RS", "porto seguro": "BA", "porto de galinhas": "PE",
 }
