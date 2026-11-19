@@ -166,4 +166,8 @@ def score(row: dict, ficha: dict | None = None, cfg: dict | None = None, w: dict
     reasons = [label for k, (level, label) in parts.items() if level > 0.25]
     if penalty:
         reasons.append(f"notícia antiga (−{penalty:g})")
+    manual = row.get("nota_manual")
+    if manual is not None and manual == manual:  # definida pelo administrador (NaN = não definida)
+        total = round(min(10.0, max(0.0, float(manual))), 1)
+        reasons = ["Nota definida pelo administrador"] + reasons
     return {"nota": total, "faixa": band(total)[0], "motivos": " · ".join(reasons), "detalhe": detail}

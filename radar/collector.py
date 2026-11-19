@@ -273,6 +273,13 @@ def set_sem_relacao(news_id: int, on: bool = True) -> None:
                      (*(c[f] for f in fields), news_id))
 
 
+def set_nota_manual(news_id: int, nota: float | None) -> None:
+    """Nota 0–10 definida pelo administrador (prevalece sobre o cálculo); None volta ao cálculo automático."""
+    value = None if nota is None else round(min(10.0, max(0.0, float(nota))), 1)
+    with db.connect() as conn:
+        conn.execute("UPDATE news SET nota_manual=? WHERE id=?", (value, news_id))
+
+
 def add_from_url(url: str, theme: str | None = None) -> dict:
     """Inclui manualmente uma notícia a partir do link (ex.: matéria recebida por WhatsApp).
 

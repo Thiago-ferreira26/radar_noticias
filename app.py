@@ -11,7 +11,7 @@ import pandas as pd
 import streamlit as st
 
 from radar import auth, cnpj, config, crm, db, dossier, export, images, score, ui
-from radar.collector import add_from_url, run_collection, set_sem_relacao
+from radar.collector import add_from_url, run_collection, set_nota_manual, set_sem_relacao
 from radar.classify import CATEGORIES, has_relation
 
 st.set_page_config(page_title="Radar Cordeiro", page_icon="📡", layout="wide")
@@ -167,7 +167,30 @@ def render_cards(df: pd.DataFrame, new_day: str | None = None, limit: int | None
                              crm_html=ui.crm_block(s, crm.lead_url(s["lead_id"]) if s else None)))
                 crm_button(r, f"{key}_crm_{r['id']}", s)
                 if auth.is_admin():
+                    nota_control(r, f"{key}_nota_{r['id']}")
                     relation_button(r, f"{key}_rel_{r['id']}")
+
+
+def nota_control(r: dict, key: str) -> None:
+    """Administrador: define a nota da notícia à mão (prevalece sobre o cálculo) ou volta ao cálculo."""
+    manual = r.get("nota_manual")
+    has_manual = manual is not None and manual == manual  # NaN = sem nota manual
+    label = f"Nota ajustada: {manual:.1f}".replace(".", ",") if has_manual else "Ajustar nota"
+    with st.popover(label, width="stretch"):
+        value = st.number_input("Nota (0 a 10)", 0.0, 10.0, float(manual if has_manual else r.get("nota") or 0),
+                                step=0.5, format="%.1f", key=f"{key}_v")
+        c1, c2 = st.columns(2)
+        if c1.button("Salvar nota", key=f"{key}_save", type="primary", width="stretch"):
+            set_nota_manual(int(r["id"]), value)
+            refresh()
+            st.session_state["crm_flash"] = f"⭐ Nota ajustada para {value:.1f}.".replace(".", ",", 1)
+            st.rerun()
+        if has_manual and c2.button("Usar cálculo", key=f"{key}_auto", width="stretch",
+                                    help="Remove a nota manual e volta à nota calculada pelas regras."):
+            set_nota_manual(int(r["id"]), None)
+            refresh()
+            st.session_state["crm_flash"] = "↩️ A notícia voltou à nota calculada."
+            st.rerun()
 
 
 def relation_button(r: dict, key: str) -> None:

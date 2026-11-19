@@ -184,7 +184,8 @@ EXTRA_COLUMNS = [("news", "manual_class", "INTEGER DEFAULT 0"),  # 1 = classific
                  ("news", "duplicate_of", "INTEGER"),  # id da notícia principal, se for repetida (dedupe.py)
                  ("news", "duplicate_manual", "INTEGER"),  # repetida marcada à mão (prevalece sobre a regra)
                  ("news", "antiga", "INTEGER DEFAULT 0"),  # 1 = já enviada em newsletter (filtro "Mais antigas")
-                 ("news", "sem_relacao", "INTEGER DEFAULT 0")]  # 1 = administrador marcou "sem relação" (oculta)
+                 ("news", "sem_relacao", "INTEGER DEFAULT 0"),  # 1 = administrador marcou "sem relação" (oculta)
+                 ("news", "nota_manual", "REAL")]  # nota 0–10 definida pelo administrador (prevalece sobre o cálculo)
 # Ordem de cópia/criação respeitando as chaves estrangeiras.
 TABLES = ["runs", "searches", "news", "dossiers", "accounts", "exa_usage", "api_usage", "news_images",
           "image_blocklist", "crm_leads", "obras", "obras_imports", "errors"]
