@@ -18,8 +18,11 @@ def _trim(text: str | None, limit: int) -> str:
     return text if len(text) <= limit else text[:limit].rsplit(" ", 1)[0] + "…"
 
 
-def build_deck(max_ops: int | None = None) -> dict:
-    """Capa + todas as notícias da base (ou as `max_ops` primeiras), na ordem de prioridade."""
+TV_FAIXAS = ("Quente", "Morna")  # padrão da TV: só as notícias com nota ≥ 6
+
+
+def build_deck(max_ops: int | None = None, faixas: tuple[str, ...] | None = TV_FAIXAS) -> dict:
+    """Capa + as notícias das faixas de nota pedidas (None = todas), ou as `max_ops` primeiras, por prioridade."""
     db.init_db()
     with db.connect() as conn:
         rows = [dict(r) for r in conn.execute("SELECT * FROM news").fetchall()]
@@ -35,6 +38,8 @@ def build_deck(max_ops: int | None = None) -> dict:
         r["uf_list"] = [u for u in (r.get("ufs") or "").split(",") if u]
         r["ficha"] = dossier.dossier_for(r, researched)
         r["score"] = score.score(r, r["ficha"], cfg, weights)  # nota 0–10, como no painel
+    if faixas:
+        rows = [r for r in rows if r["score"]["faixa"] in faixas]
 
     # Capa
     ufs = Counter(u for r in rows for u in r["uf_list"] if u not in ("BR", "NE"))
@@ -44,7 +49,8 @@ def build_deck(max_ops: int | None = None) -> dict:
         "new": sum(r["is_new"] for r in rows),
         "updated": fmt_date(last["finished_at"]) if last else "—",
         "by_potential": [[p, sum(r["potential"] == p for r in rows), POT_COLORS[p]] for p in POTENTIALS],
-        "by_nota": [[f, sum(r["score"]["faixa"] == f for r in rows), c] for f, c in NOTA_COLORS.items()],
+        "by_nota": [[f, sum(r["score"]["faixa"] == f for r in rows), c] for f, c in NOTA_COLORS.items()
+                    if not faixas or f in faixas],
         "by_vertical": [[v, sum(r["vertical"] == v for r in rows), c] for v, c in VERT_COLORS.items()],
         "by_uf": [[UF_LABEL.get(u, u), n, "#3f8f8a"] for u, n in ufs.most_common(4)],
     }

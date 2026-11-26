@@ -376,7 +376,7 @@ if is_admin:  # uso da cota do Exa: só na visão de administrador
 stats.append((last_update, "Última atualização", False))
 html(ui.header(stats))
 c_tv, c_src, _, c_admin = st.columns([3, 2, 3, 2], vertical_alignment="center")
-c_tv.page_link("pages/tv.py", label="Abrir Modo TV (carrossel para a TV)", icon="📺")
+c_tv.page_link("pages/tv.py", label="Abrir Modo TV (carrossel: notícias Quente e Morna)", icon="📺")
 if c_src.button("🔍 Fontes de dados", key="open_sources", width="stretch"):
     sources_dialog()
 with c_admin:

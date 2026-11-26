@@ -2,6 +2,7 @@
 
     http://<servidor>:8501/tv
 Parâmetros opcionais na URL: ?segundos=18&capa=12&capa_a_cada=30&max=0&recarregar=10 (max=0: todas)
+&faixas=todas mostra também as notícias Fria e Baixa (padrão: só Quente e Morna, nota ≥ 6).
 """
 from __future__ import annotations
 
@@ -46,7 +47,9 @@ cfg = {
     "coverEvery": _int("capa_a_cada", 30, 0, 1000),  # repete a capa a cada N notícias (0 = só no início)
 }
 try:
-    deck = build_deck(max_ops=_int("max", 0, 0, 5000) or None)  # 0 = todas as notícias
+    todas = str(st.query_params.get("faixas", "")).lower() == "todas"
+    deck = build_deck(max_ops=_int("max", 0, 0, 5000) or None,  # 0 = todas as notícias
+                      faixas=None if todas else ("Quente", "Morna"))
 except db.DatabaseConnectionError as exc:
     st.error("**Banco de dados indisponível**\n\n" + str(exc).replace("\n", "  \n"))
     st.stop()
