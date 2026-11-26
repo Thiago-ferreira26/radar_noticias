@@ -88,6 +88,15 @@ excluir_se_contiver:
   - tiroteio
   - tráfico de drogas
   - cocaína
+  - feminicídio
+  # polícia: viaturas, efetivo e operações, sem obra
+  - viatura
+  - viaturas
+  - policiar
+  - polícia civil
+  - polícia federal
+  - polícia militar
+  - polícia rodoviária federal
   # listas e mercado financeiro sem obra
   - licitações de saúde
   - licitações de alimentação
